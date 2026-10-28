@@ -1,0 +1,31 @@
+# Render Blueprint —— 把《风声再临》挂到公网
+#
+# 用法：仓库推到 GitHub → Render 控制台 New → Blueprint → 选仓库 → Apply。
+# 之后每次 push 到默认分支都会自动重新部署。
+#
+# 免费层（plan: free）的真实限制，先知道再上：
+#   · 0.1 CPU / 512MB 内存，每月 750 实例小时
+#   · 15 分钟没有入站流量（**包括 WebSocket 消息**）就休眠，下一个访问者等约 1 分钟
+#   · 文件系统是临时的，重启/休眠后本地文件全丢
+#   · Render 可能随时重启它
+# 一局游戏里 WebSocket 一直在收发，不会中途睡；只有「开局前第一下」需要唤醒，
+# 建议你自己先打开一次把实例叫醒，再把链接发给朋友。
+services:
+  - type: web
+    name: abs-fengsheng
+    runtime: node
+    plan: free
+    # 新加坡离国内近；若 Apply 时报 region 不支持免费层，删掉这一行走默认的 oregon
+    region: singapore
+    # 显式 --include=dev：vite / typescript 在 devDependencies 里，
+    # 而有些平台会预设 NODE_ENV=production 让 npm ci 跳过它们，构建就找不到 vite
+    buildCommand: npm ci --include=dev && npm run build
+    # tsx 跑 TS 服务端（tsx 已在 dependencies 里，见 package.json）
+    startCommand: npm start
+    # 服务端自带 /healthz，Render 用它判断实例是否活着
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      # 临时文件系统上写快照没有意义（重启就没了），干脆关掉
+      - key: ABS_DATA_DIR
+        value: off

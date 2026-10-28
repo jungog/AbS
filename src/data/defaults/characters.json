@@ -1,0 +1,100 @@
+[
+  {
+    "id": "translator",
+    "name": "译电员",
+    "hidden": false,
+    "difficulty": 2,
+    "skillId": "drawOnDecode",
+    "skillText": "【明译】你使用【破译】查看情报后，额外抽 1 张牌。",
+    "task": {
+      "kind": "collectTotal",
+      "count": 5
+    }
+  },
+  {
+    "id": "veteran",
+    "name": "老鬼",
+    "hidden": true,
+    "difficulty": 3,
+    "skillId": "peekOnTurnStart",
+    "skillText": "【探路】你的回合开始时，自动查看牌库顶 1 张牌（仅你可见）。",
+    "task": {
+      "kind": "noBlackWith",
+      "count": 4
+    }
+  },
+  {
+    "id": "courier",
+    "name": "联络员",
+    "hidden": false,
+    "difficulty": 2,
+    "skillId": "drawOnIntelReturn",
+    "skillText": "【往返】你传出的情报若被一路拒收、最终传回你面前，你抽 1 张牌。",
+    "task": {
+      "kind": "holdColor",
+      "color": "red",
+      "count": 3
+    }
+  },
+  {
+    "id": "broker",
+    "name": "情报贩子",
+    "hidden": true,
+    "difficulty": 4,
+    "skillId": "discardBlackOnce",
+    "skillText": "【脱手】每局一次：你收到黑色情报时自动弃置，不放入自己面前。",
+    "task": {
+      "kind": "collectTotal",
+      "count": 6
+    }
+  },
+  {
+    "id": "cipher",
+    "name": "译码专家",
+    "hidden": false,
+    "difficulty": 1,
+    "skillId": "handLimit2",
+    "skillText": "【从容】你的手牌上限 +2。",
+    "task": {
+      "kind": "holdColor",
+      "color": "blue",
+      "count": 3
+    }
+  },
+  {
+    "id": "anchor",
+    "name": "播音员",
+    "hidden": true,
+    "difficulty": 3,
+    "skillId": "forceTextMethod",
+    "skillText": "【广播】你传出的情报一律以「文本」方式传递（牌面朝上）。",
+    "task": {
+      "kind": "noBlackWith",
+      "count": 4
+    }
+  },
+  {
+    "id": "stoic",
+    "name": "硬骨头",
+    "hidden": false,
+    "difficulty": 2,
+    "skillId": "drawOnBlack",
+    "skillText": "【硬扛】你每收到 1 张黑色情报，抽 1 张牌。",
+    "task": {
+      "kind": "othersDead",
+      "count": 3
+    }
+  },
+  {
+    "id": "sentinel",
+    "name": "哨兵",
+    "hidden": false,
+    "difficulty": 2,
+    "skillId": "drawOnIntercepted",
+    "skillText": "【反制】你传出的情报被他人【截获】时，你抽 1 张牌。",
+    "task": {
+      "kind": "surviveRounds",
+      "round": 6
+    }
+  }
+]

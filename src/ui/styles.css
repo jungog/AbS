@@ -1,0 +1,845 @@
+:root {
+  --paper: #faf7f2;
+  --panel: #f2ece2;
+  --panel-2: #ebe3d6;
+  --ink: #1e1b18;
+  --ink2: #4a443e;
+  --ink3: #7c736b;
+  --rule: #ddd5c9;
+  --rule-2: #c9bead;
+  --red: #8e2b26;
+  --red-soft: #f3e4e1;
+  --blue: #2c4a66;
+  --blue-soft: #e2e9f0;
+  --black: #2b2622;
+  --black-soft: #e8e4df;
+  --green: #3c5a3e;
+  --gold: #a8894f;
+  --serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", SimSun, serif;
+  --sans: "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--rule-2);
+  background: #fff;
+  color: var(--ink);
+  padding: 7px 14px;
+  border-radius: 3px;
+  transition: background 0.12s, border-color 0.12s, transform 0.06s;
+}
+button:hover:not(:disabled) { background: var(--panel); border-color: var(--ink3); }
+button:active:not(:disabled) { transform: translateY(1px); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+button.primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+button.primary:hover:not(:disabled) { background: #3a3530; border-color: #3a3530; }
+
+button.danger { color: var(--red); border-color: #d9b8b4; }
+button.danger:hover:not(:disabled) { background: var(--red-soft); }
+
+button.ghost { background: transparent; border-color: transparent; color: var(--ink3); }
+button.ghost:hover:not(:disabled) { background: var(--panel); color: var(--ink); }
+
+select, input {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--rule-2);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--ink);
+}
+
+/* ---------------- 布局 ---------------- */
+.app { display: flex; flex-direction: column; height: 100%; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  height: 52px;
+  border-bottom: 1px solid var(--rule);
+  background: rgba(250, 247, 242, 0.94);
+  backdrop-filter: blur(6px);
+  flex: none;
+}
+.topbar .brand {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  /* 窄屏下不许折行：顶栏是 flex 容器，标题一折行整个高度就塌，
+     「对局」也会被挤成「对 / 局」两行。 */
+  white-space: nowrap;
+  min-width: 0;
+}
+.topbar .brand small {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: var(--gold);
+  font-weight: 600;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.tabs { display: flex; gap: 4px; margin-left: auto; flex: none; }
+.tabs button {
+  border: none;
+  background: transparent;
+  color: var(--ink3);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.tabs button.active { background: var(--panel-2); color: var(--ink); font-weight: 600; }
+
+.content { flex: 1; min-height: 0; overflow: hidden; }
+
+/* ---------------- 对局页 ---------------- */
+.battle {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  height: 100%;
+  min-height: 0;
+}
+.battle-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 18px;
+  gap: 12px;
+  overflow-y: auto;
+}
+.battle-side {
+  border-left: 1px solid var(--rule);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--ink3);
+  flex: none;
+}
+.statusbar .pill {
+  border: 1px solid var(--rule-2);
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+}
+.statusbar .pill.turn { border-color: var(--gold); color: var(--gold); font-weight: 600; }
+.statusbar .pill.warn { border-color: var(--red); color: var(--red); }
+
+/* 玩家板 */
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  flex: none;
+}
+
+.pcard {
+  border: 1px solid var(--rule);
+  background: #fff;
+  padding: 10px 12px 11px;
+  border-radius: 3px;
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.pcard.acting {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(168, 137, 79, 0.18);
+}
+.pcard.me { background: #fffdf8; }
+.pcard.dead { opacity: 0.5; filter: grayscale(0.7); }
+/* 已主动离开：座位还在（引擎里不能删），但人不会回来了。
+   比「出局」轻一点 —— 牌局还在继续，只是这张牌桌由 AI 在替他打 */
+.pcard.left { opacity: 0.62; }
+
+.pcard-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+.pcard-name {
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pcard-seat { font-size: 11px; color: var(--ink3); font-variant-numeric: tabular-nums; }
+.pcard-bot { font-size: 10px; color: var(--gold); border: 1px solid var(--gold); padding: 0 4px; border-radius: 2px; }
+
+.tag {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.tag.red { background: var(--red-soft); color: var(--red); font-weight: 700; }
+.tag.blue { background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.tag.agent { background: var(--panel-2); color: var(--ink2); font-weight: 700; }
+.tag.hidden { background: var(--panel-2); color: var(--ink3); }
+
+.pcard-char { font-size: 11.5px; color: var(--ink3); margin-bottom: 8px; display: flex; gap: 6px; align-items: center; }
+
+.intel-row { display: flex; gap: 4px; align-items: center; min-height: 26px; flex-wrap: wrap; }
+.intel-chip {
+  width: 22px;
+  height: 26px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0;
+}
+.intel-chip.red { background: var(--red); }
+.intel-chip.blue { background: var(--blue); }
+.intel-chip.black { background: var(--black); }
+.intel-chip.empty {
+  background: transparent;
+  border: 1px dashed var(--rule-2);
+  color: var(--rule-2);
+  font-weight: 400;
+}
+.intel-count { font-size: 11px; color: var(--ink3); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.pcard-foot { display: flex; justify-content: space-between; margin-top: 7px; font-size: 11px; color: var(--ink3); }
+
+/* 手牌 */
+.handzone { flex: none; }
+
+/* 手牌与操作区之间的空隙。矮屏上收一半：360×640 里每一像素都在抢，
+   而这个空隙纯粹是呼吸感（原来写成行内 style，媒体查询改不动）。 */
+.action-gap { height: 12px; }
+.section-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink3);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.hand { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.card {
+  width: 82px;
+  height: 112px;
+  border: 1px solid var(--rule-2);
+  border-radius: 3px;
+  background: #fff;
+  position: relative;
+  padding: 8px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+  user-select: none;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(30, 27, 24, 0.12); }
+.card.selected { border-color: var(--ink); box-shadow: 0 0 0 2px rgba(30, 27, 24, 0.15); transform: translateY(-4px); }
+.card.disabled { opacity: 0.45; cursor: not-allowed; }
+.card.disabled:hover { transform: none; box-shadow: none; }
+
+.card-color {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  border-radius: 3px 0 0 3px;
+}
+.card-color.red { background: var(--red); }
+.card-color.blue { background: var(--blue); }
+.card-color.black { background: var(--black); }
+
+.card-fn {
+  font-family: var(--serif);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-left: 3px;
+  min-height: 32px;
+}
+.card-meta {
+  margin-top: auto;
+  margin-left: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 10px;
+  color: var(--ink3);
+}
+.card-method {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+}
+.method-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+}
+.method-dot.cipher { background: var(--ink); border-color: var(--ink); }
+.method-dot.text { background: transparent; border-color: var(--ink); }
+.method-dot.direct { background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); border-color: var(--ink); }
+
+/* 操作区 */
+.actionbar {
+  border: 1px solid var(--rule-2);
+  background: #fff;
+  border-radius: 3px;
+  padding: 12px 14px;
+  flex: none;
+}
+.actionbar.waiting { border-style: dashed; background: transparent; }
+.actionbar-title {
+  font-size: 12px;
+  color: var(--ink3);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 阶段名（「弃牌阶段」「出牌阶段」…）绝不能换行。
+   它是 flex 子项，默认 flex-shrink: 1 —— 后面的 hint 一长，它就被挤成
+   一行一个字（360 宽实测：「弃牌阶段」被压成「弃牌阶」/「段」两行，
+   和顶栏 tab 被挤成「对 / 局」是同一类失败）。
+   让它不缩、不换行，需要让路的是 hint，不是标题。 */
+.actionbar-title strong { color: var(--ink); font-weight: 700; flex: none; white-space: nowrap; }
+/* 标题里的提示句折行时**均分两行**。
+   360px 上响应窗口的提示是「有情报正在传递 —— 是否使用【截获】拿走它？」，
+   默认折法是第二行只剩「它?」两个字（实测），既难看又让眼睛多跳一次。
+   `balance` 只在折行时改变断点、不改变行数 —— 高度和上面那条预算断言都不受影响。
+   阶段名不参与（它 `white-space: nowrap`）。 */
+.actionbar-title .hint { text-wrap: balance; }
+.action-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.action-row + .action-row { margin-top: 10px; }
+.hint { font-size: 11.5px; color: var(--ink3); }
+
+/* 多选操作的「已选 X / N」，贴在确认按钮旁边。
+   塞进标题会把阶段名挤成两行；而且它是这类操作唯一的过程反馈，
+   应该跟着手指走。选够了变金色 —— 灰按钮配一个不显眼的数字，
+   就是「这按钮为什么点不动」的典型来源。 */
+.sel-count { font-size: 12px; color: var(--ink3); font-variant-numeric: tabular-nums; }
+.sel-count.ok { color: var(--gold); font-weight: 600; }
+.error {
+  font-size: 12px;
+  color: var(--red);
+  background: var(--red-soft);
+  border-left: 2px solid var(--red);
+  padding: 6px 10px;
+  margin-top: 10px;
+}
+
+/* 日志 */
+.log-head {
+  padding: 12px 16px 8px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink3);
+  font-weight: 600;
+  border-bottom: 1px solid var(--rule);
+  flex: none;
+}
+.log-list { flex: 1; overflow-y: auto; padding: 10px 16px 20px; font-size: 12.5px; line-height: 1.75; }
+
+/* 日志列表 + 浮在右下角的「↓ N 条新消息」。
+   包一层是为了给那颗药丸一个定位祖先 —— 不能直接给 .battle-side 加
+   `position: relative`：横屏时它是 `position: fixed`，改了会把整栏挪位。 */
+.log-wrap { position: relative; flex: 1; min-height: 0; display: flex; }
+.log-wrap > .log-list { min-height: 0; }
+
+/* 用户翻上去读历史、又有新消息堆在下面时才出现。
+   点击区按项目规矩 ≥32px（`min-height`），圆角让它在 2~3 行的窄栏里
+   看着像一颗浮起来的提示，而不是又一行业务文案。 */
+.log-jump {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 1px solid var(--gold);
+  background: var(--paper);
+  color: var(--gold);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 8px rgba(30, 27, 24, 0.14);
+  cursor: pointer;
+}
+.log-jump:hover { background: #fff; }
+.log-item { padding: 3px 0; border-bottom: 1px solid rgba(221, 213, 201, 0.5); color: var(--ink2); }
+.log-item.good { color: var(--green); }
+.log-item.bad { color: var(--red); }
+.log-item.warn { color: var(--gold); }
+.log-item.secret { color: var(--blue); font-style: italic; }
+
+/* 结算浮层 */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(30, 27, 24, 0.55);
+  display: flex;
+  /* 内容比屏幕高时要能滚：手机横屏只有 330px 高（带浏览器工具栏），
+     而结算卡最坏情况（全员获胜的 chip 两行 + 「N 人掉线」提示行）有 352px。
+     原来 overflow 是 visible + align-items: center，超出部分**上下各裁一半**
+     且滚不到 —— 标题和「再来一局」都够不着。 */
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  z-index: 50;
+  padding: 24px;
+}
+/* 放得下时仍然居中：flex 里子项的 auto 外边距会吃掉多余空间，
+   放不下时 auto 归零、从顶部开始排，超出部分靠上面的 overflow-y 滚。 */
+.overlay > * { margin-block: auto; }
+.result {
+  background: var(--paper);
+  border: 1px solid var(--rule-2);
+  max-width: 460px;
+  width: 100%;
+  padding: 28px 30px;
+  border-radius: 4px;
+}
+/* 短屏（手机横屏 300–390 高）：结算卡本身也要压一压。
+   352px 的卡片在 330 高的屏上就算能滚，也意味着「再来一局」得滚一下才点得到；
+   压到 ~280 之后常见尺寸不用滚，只有 300 以下才落到滚动兜底。 */
+@media (max-height: 520px) {
+  .overlay { padding: 12px; }
+  .result { padding: 16px 18px; }
+  .result h2 { font-size: 19px; margin-bottom: 2px; }
+  .result .side { margin-bottom: 10px; }
+  .result p { font-size: 13px; }
+  .result .winners { margin: 8px 0 12px; }
+  .result .winner-chip { padding: 2px 8px; font-size: 12px; }
+}
+.result h2 { font-family: var(--serif); font-size: 24px; margin: 0 0 6px; }
+.result .side { font-size: 12px; letter-spacing: 0.2em; color: var(--gold); font-weight: 700; margin-bottom: 16px; }
+.result p { font-size: 14px; color: var(--ink2); }
+.result .winners { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 20px; }
+.result .winner-chip { border: 1px solid var(--rule-2); background: #fff; padding: 4px 10px; border-radius: 2px; font-size: 13px; }
+
+/* 启动面板 */
+.launch { max-width: 720px; margin: 48px auto; padding: 0 24px; }
+.launch h1 { font-family: var(--serif); font-size: 30px; margin: 0 0 4px; letter-spacing: 0.03em; }
+.launch .sub { color: var(--ink3); font-size: 13px; margin-bottom: 28px; }
+.mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 26px; }
+.mode-card {
+  border: 1px solid var(--rule);
+  background: #fff;
+  padding: 16px 16px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mode-card:hover { border-color: var(--rule-2); }
+.mode-card.active { border-color: var(--ink); box-shadow: 0 0 0 2px rgba(30, 27, 24, 0.08); }
+.mode-card h3 { font-family: var(--serif); font-size: 15px; margin: 0 0 6px; }
+.mode-card p { font-size: 12px; color: var(--ink3); margin: 0; line-height: 1.7; }
+.field { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 13px; }
+.field label { color: var(--ink3); min-width: 88px; }
+
+/* 配置页 */
+.config { padding: 20px 24px 60px; max-width: 1180px; margin: 0 auto; height: 100%; overflow-y: auto; }
+.config-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 6px; }
+.config-head h1 { font-family: var(--serif); font-size: 24px; margin: 0; }
+.config-desc { color: var(--ink3); font-size: 12.5px; margin-bottom: 18px; }
+.issue-list { margin: 12px 0 20px; font-size: 12.5px; }
+.issue { padding: 5px 10px; border-left: 2px solid var(--rule-2); margin-bottom: 4px; background: #fff; }
+.issue.error { border-left-color: var(--red); color: var(--red); }
+.issue.warn { border-left-color: var(--gold); color: var(--ink2); }
+.tabs-line { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); margin-bottom: 16px; }
+.tabs-line button {
+  border: none; background: transparent; border-radius: 0;
+  padding: 8px 14px; color: var(--ink3); font-size: 13px;
+  border-bottom: 2px solid transparent;
+}
+/* tab 栏也不许把中文压成竖排。
+ * 数据配置那 4 个 tab 在 360 宽上自然宽度合计约 360px，容器只有 312 ——
+ * flex 子项默认会**缩到 min-content 就停**（不会均分剩余空间），
+ * 于是每个 tab 变成 3 行（「身份与规则」竖成 身/份/与/规/则），
+ * 而右边还空着 45px。现在：不缩、不换行，整条自己横向滚。
+ * 判据在 `check:viewports` 的 `数据配置的 tab 栏不竖排`。 */
+.tabs-line { overflow-x: auto; }
+.tabs-line button { flex: 0 0 auto; white-space: nowrap; }
+/* 360 宽上 4 个 tab 的自然宽度合计 339 + 间距 6 = 345，容器只有 312。
+ * 内边距从 14 收到 8 之后合计 297 —— 全部一行放得下，不用横滚
+ * （光靠 `overflow-x: auto` 会让最右边的「JSON」跑到可视区外，
+ * 那比三行竖排好，但不如让四颗都在）。横滚保留，兜更窄的屏。 */
+@media (max-width: 560px) {
+  .tabs-line button { padding: 8px 8px; }
+}
+.tabs-line button.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+
+table.grid { width: 100%; border-collapse: collapse; font-size: 12.5px; background: #fff; }
+/* 窄屏上表格不许被压成「中文竖排」。
+ *
+ * 列宽是 `th style={{width}}` 声明好的（卡牌表 42+90+130+80+90+110+50 = 592），
+ * 但 `width: 100%` 让表在 312px 的容器里被强行压缩 —— 每列只剩 ~39px，
+ * 「传递方式」竖成四行、「效果文本」竖成四行，`id` 列只剩一个字符。
+ * 这和 `check:viewports` 里那条「角色名不竖排」是同一个坏法，只是没人查这一页。
+ *
+ * 修法是给每张表一个**放得下所有声明列宽**的 `min-width`（写在 JSX 里，
+ * 每张表的列数不同），外面套一层只让**表格自己**横向滚动的容器。
+ * 不把 `.config` 变成横向滚动容器：那样顶部的标题、工具栏、tab 会跟着一起
+ * 左右滑走，手指刚点的按钮会从指头下面跑掉。
+ *
+ * ⚠ 代价：横向滚动容器**必然**杀死内部的 `position: sticky`（`th` 的吸头）。
+ * 实测 1280×720 把 `.config` 滚 300px：外层 `overflow-x: auto` 时表头 top=43
+ * （跟着滚走），改回 `overflow: visible` 时 top=72（= 容器顶 52 + padding 20，吸住）。
+ * 所以只在**真的放不下**的宽度上开滚动：最宽的表（角色表）声明列宽合计 910，
+ * 加 `.config` 左右各 24 的 padding = 958 —— 960 以上一律不滚，桌面保住吸头。 */
+@media (max-width: 960px) {
+  .grid-scroll { overflow-x: auto; }
+}
+.grid-scroll > table.grid { width: 100%; }
+table.grid th {
+  text-align: left; font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em;
+  color: var(--ink2); padding: 8px 10px; border-bottom: 1.5px solid var(--ink2);
+  position: sticky; top: 0; background: var(--paper); z-index: 1;
+}
+table.grid td { padding: 5px 10px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+table.grid tr:hover td { background: #fffdf8; }
+table.grid input, table.grid select { width: 100%; padding: 3px 6px; font-size: 12px; border-color: transparent; background: transparent; }
+table.grid input:focus, table.grid select:focus { border-color: var(--rule-2); background: #fff; outline: none; }
+table.grid .num { font-variant-numeric: tabular-nums; color: var(--ink3); width: 42px; }
+
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.toolbar .spacer { flex: 1; }
+.stat-row { display: flex; gap: 18px; font-size: 12px; color: var(--ink3); margin-bottom: 12px; flex-wrap: wrap; }
+.stat-row b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+textarea.json {
+  width: 100%; min-height: 420px; font-family: Consolas, Monaco, monospace;
+  font-size: 12px; line-height: 1.6; padding: 12px; border: 1px solid var(--rule-2);
+  border-radius: 3px; background: #fff; color: var(--ink); resize: vertical;
+}
+
+/* 操作区吸底。
+ *
+ * 为什么不是只给手机：任何高度不够的窗口都会中招 ——
+ * 实测 1280×720 的可滚区高 668px、内容高 801px，操作区底部落在 743px，
+ * 也就是「轮到你出牌，但按钮在屏幕外」，得先滚一下才能点。
+ * 5 张座位卡 + 状态栏 + 目标条就把 720p 的窗口吃满了。
+ *
+ * 为什么可以全局开：`position: sticky` 在内容装得下的时候**等于没生效**
+ * （元素本来就在自己的流位置、也在视口内），所以 1440×900 这种宽裕的窗口
+ * 一点变化都没有；只有内容溢出时才把它钉在底部。
+ * 这就是它比 fixed 好的地方 —— 不用为每种尺寸各写一套。
+ *
+ * 只吸「你的回合」那种（:not(.waiting)）：等待条不需要一直占着屏幕。 */
+.battle-main > .actionbar:not(.waiting),
+.battle-main > .hand-strip {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  box-shadow: 0 -10px 14px -10px rgba(30, 27, 24, 0.28);
+}
+/* 手牌条本来是透明的，吸底之后座位卡会从它下面透出来 */
+.battle-main > .hand-strip {
+  background: var(--paper);
+}
+
+@media (max-width: 900px) {
+  /* 顶栏：390px 宽下「风声再临 + 英文副标题 + 两个 tab」加起来超过屏宽，
+     标题和 tab 都会折行 —— 实测「对局」被挤成「对 / 局」两行。
+     收紧间距 + 缩字号，副标题在更窄的屏幕上单独藏掉。 */
+  .topbar { padding: 0 12px; gap: 10px; }
+  .topbar .brand { font-size: 15px; }
+  /* 28px 高的 tab 手指点着费劲，补到 32px（顶栏 52px，放得下） */
+  .tabs button { padding: 8px 10px; font-size: 12.5px; }
+
+  .battle { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .battle-side { border-left: none; border-top: 1px solid var(--rule); max-height: 220px; }
+  .board { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .card { width: 70px; height: 96px; }
+
+  /* 手牌在窄屏下改成单排横向滚动。
+     换行的话 5 张牌要占两排（约 240px），操作区一吸底就把牌板整个盖住；
+     单排之后操作区矮一半，牌板还能留出可看的区域。
+     -webkit-overflow-scrolling 是给 iOS 的惯性滚动，不加会显得很涩。 */
+  .hand {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  /* 选中态是 `translateY(-4px)`（见 .card.selected），而上面这条 `overflow-x: auto`
+     按 CSS 规范会把纵向也变成 auto —— 于是抬起的那几个像素被容器上沿裁掉：
+     360×640 实测选中卡越出容器 8px，顶部边框和留白没了（看着像「顶格」而不是「抬起」），
+     而且那几像素连点都点不中（elementFromPoint 落到 handzone）。
+     只给**可点选**的那条手牌行留出抬起的空间；只读的手牌条（.hand-strip）没有选中态，不用给。 */
+  .actionbar .hand { padding-top: 8px; }
+  .hand > .card { flex: none; }
+
+  /* 窄屏下把容器的下内边距让给吸底块，让它真正贴到屏幕边缘 */
+  .battle-main { padding-bottom: 0; }
+  .battle-main > .hand-strip { padding-bottom: 12px; }
+  .battle-main > .actionbar:not(.waiting) { margin-bottom: 12px; }
+}
+
+/* 手机竖屏（390 一类）连副标题都放不下了 —— 藏掉，保住主标题和两个 tab 各占一行。
+   判据来自 npm run check:viewports 的截图，不是拍脑袋定的。 */
+@media (max-width: 560px) {
+  .topbar .brand small { display: none; }
+
+  /* 情报日志：390×844 下 220px 占了屏高 26%，而牌板里还要减去吸底的操作区 228px，
+     留给座位卡的只剩 344px。改成按屏高算（16vh，390×844 上约 135px）后多出 80px，
+     日志本身可滚，少看两行不影响判断「谁选了什么角色」。
+     用 vh 而不是固定像素：360×640 那种小屏上 140px 又变成 22% 了。 */
+  .battle-side { max-height: 16vh; }
+
+  /* 座位卡在手机上锁死两列。
+     auto-fill + minmax(160px) 在 360px 宽上会掉成**单列**（内容宽 328 < 2×160+10），
+     5 张卡纵向排开 706px —— 一屏只能看到一条缝。锁两列后 3 行、约 370px。 */
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- 手机横屏 ---------- */
+/* 844×390 这类横屏：高度只有 338px（扣掉顶栏），而竖排布局里操作区 210px +
+   日志 62px 一叠，牌板一点都露不出来 —— 实测操作区从 y=68 盖到 278，
+   第一排座位卡的身份行被盖住 188px，横屏等于只能看见自己的手牌。
+   宽度反而富裕（844），所以横屏把「手牌 + 日志」挪到右侧固定栏，牌板独占左列。
+   两者都保留：日志没被藏掉，只是换了位置。 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .battle-main {
+    /* 给右侧固定栏让位：栏宽 320 + 12 间隙 */
+    padding-right: 332px;
+  }
+  /* 操作区脱离文档流，钉在右上；底部 120px 留给日志。
+     选择器必须写成 `.battle-main > .actionbar:not(.waiting)`：
+     吸底那条规则是 `position: sticky`，它的特异性（3 个类）比
+     `.battle-main > .actionbar`（2 个类）高，写松了根本不生效 —— 实测踩过，
+     量出来的 top 还是 181（吸在底部），而不是固定的 52。 */
+  .battle-main > .actionbar:not(.waiting),
+  .battle-main > .actionbar.waiting {
+    position: fixed;
+    top: 52px;
+    right: 0;
+    bottom: 120px;
+    width: 320px;
+    margin: 0;
+    border-radius: 0;
+    border-right: none;
+    border-top: none;
+    box-shadow: none;
+    overflow-y: auto;
+  }
+  /* 观战没有操作区，渲染的是 .spectator-panel。不一起挪的话：
+     右栏空着 320px（实测 rightColumnUsed=0），而面板被挤到 y=666 ——
+     屏高才 390，得往下滚一大截才能看到「当时轮到谁 / 落后几轮」。 */
+  .battle-main > .spectator-panel {
+    position: fixed;
+    top: 52px;
+    right: 0;
+    bottom: 120px;
+    width: 320px;
+    margin: 0;
+    border-radius: 0;
+    border-left: 1px solid var(--rule);
+    overflow-y: auto;
+  }
+  .battle-side {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    width: 320px;
+    height: 120px;
+    max-height: 120px;
+    border-left: 1px solid var(--rule);
+  }
+  /* 选角面板也是 .actionbar（`.actionbar.pick`），会被上面的规则一起塞进 320 宽的右栏。
+     但候选角色只有 3 个，320 宽 + 2 列 ⇒ 排成 2 行，第三张要滚才看得到（实测还要滚 67px）。
+     选角是一次性决策，横屏让它占满整宽、3 列一行看完，滚都不用滚。
+     选择器带上 .actionbar.pick（3 个类）才能压住上面的 `.actionbar:not(.waiting)`。 */
+  .battle-main > .actionbar.pick {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+  }
+  /* 4 个类，稳过后面那条 `@media (max-width: 900px) .pick-grid { 2 列 }` */
+  .battle-main > .actionbar.pick .pick-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* 把最后一行操作按钮钉在栏底。
+     右栏高度只有 218px（屏高 390 − 顶栏 52 − 日志 120），而「手牌 + 阶段说明 +
+     按钮」实测要 346px —— 溢出 129px。栏本身是 `overflow-y: auto`，滚是能滚，
+     但滚到中间时**一个按钮都看不见**：截图里右栏最后一行是「方式：密电 / 文本」，
+     「传出这张情报」在栏外 129px。这就是「轮到我出牌，但按钮不在屏幕上」。
+     主按钮几乎总在最后一行（出牌阶段的最后一行是【烧毁】/【试探】这类可选操作，
+     主按钮「结束出牌」在它上面，钉住不会遮住它）。 */
+  .battle-main > .actionbar > .action-row:last-child {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: #fff;
+    /* 钉住的行会盖住上面的内容，用一道向上的阴影说明「下面还有东西」 */
+    box-shadow: 0 -8px 10px -8px rgba(30, 27, 24, 0.3);
+    padding-bottom: 2px;
+  }
+}
+
+/* ---------- 日志栏：小屏上按「占比」收，而不是按固定像素 ---------- */
+/* `.log-head` 默认 `padding: 12px 16px 8px`，固定吃掉 40px；`.log-list` 自带
+   `padding: 10px 16px 20px`，再吃掉 30px。这两笔在桌面（300px 宽的整列）上无所谓，
+   但日志栏在小屏上只有：
+     横屏 844×390 → 120px（标题占 33%）
+     竖屏 360×640 → 102px（标题占 39%）
+     竖屏 390×844 → 135px（标题占 30%）
+   实测 360×640 上内容盒只剩 32px，而单条日志 29px —— **只能看见 1 条**。
+   收掉留白（一个字都没删）之后：
+     横屏 120px → 3 条（原 2 条）
+     360×640  → 2 条（原 1 条）
+     390×844  → 3 条（原 2 条）
+   条件写成「窄竖屏 或 矮横屏」，和 `.battle-side` 变矮的那两个断点对齐 ——
+   分开写两份迟早只改一处。 */
+@media (max-width: 560px), (orientation: landscape) and (max-height: 520px) {
+  .battle-side .log-head {
+    padding: 4px 12px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+  }
+  /* 那 20px 底部留白是给「滚到底」留呼吸的，但在 102px 的栏里等于把最后一条顶出可视区 */
+  .battle-side .log-list {
+    padding: 2px 12px 4px;
+  }
+  /* 条目 3px 上下内边距 + 1px 分隔线，节距 29px；收到 2px 后 27px。
+     分隔线还在，不会糊成一片。 */
+  .battle-side .log-item {
+    padding: 2px 0;
+  }
+}
+
+/* ---------- 选角面板 ---------- */
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+/* 3 列在 390px 下每张只剩约 98px 内容宽：角色名被挤成竖排、
+   描述一行两个字。窄屏改 2 列。
+   ⚠️ 这条必须写在这里（基础规则之后）—— 写成前面的媒体查询会被
+   `grid-template-columns: repeat(3, ...)` 覆盖掉，页面毫无变化。 */
+@media (max-width: 900px) {
+  .pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.pick-card {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--paper);
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.12s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pick-card:hover {
+  border-color: var(--ink2);
+  transform: translateY(-1px);
+}
+.pick-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pick-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  /* 不折行：flex 子项默认可压缩，窄屏下「情报贩子」会被挤成一列一个字。
+     宁可让难度星级去换行，也不能让角色名竖排。 */
+  white-space: nowrap;
+  flex: none;
+}
+.pick-diff {
+  font-size: 11px;
+  color: var(--ink3);
+  letter-spacing: 1px;
+}
+.pick-skill {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink2);
+}
+.pick-task {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--red);
+  border-top: 1px dashed var(--rule);
+  padding-top: 6px;
+}
+.pick-flag {
+  align-self: flex-start;
+  font-size: 11px;
+  color: var(--ink3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+/* ================================================================== */
+/* 矮屏（高度不足 700px）                                              */
+/* ================================================================== */
+
+/* 为什么按「高度」而不是「宽度」写：问题是纵向预算不够，不是屏幕窄。
+ * 360×640 的手机、以及把浏览器缩放开到 150% 的笔记本都会中招 ——
+ * 后者宽度有 1280，但可视高度只有 600 上下，同样打不了牌。
+ *
+ * 640 高的屏上实测：状态区 171px + 吸底操作区 228px = 399px，
+ * 只剩 87px 给座位卡（一张卡 156px）——「轮到你出牌，桌上一个人都看不见」。
+ * 这里只压「不影响决策」的密度：内边距、字号、牌面尺寸。
+ * 角色/身份/情报数/目标这些信息一个都不减。 */
+@media (max-height: 700px) {
+  /* 状态条：360 宽下「第 N 轮 / 谁的回合 / 牌库·弃牌」加「等待 + 计时环」
+     正好卡在换行边界上，一换行就多占 28px。收紧到一行。 */
+  .statusbar { gap: 6px; font-size: 11.5px; }
+  .statusbar .pill { font-size: 10.5px; padding: 1px 6px; }
+  .countdown svg { width: 24px; height: 24px; }
+  .countdown b { font-size: 11.5px; }
+  /* 手牌矮一点，操作区就能矮一截 */
+  .card { width: 62px; height: 84px; }
+  .intel-chip { width: 20px; height: 24px; }
+}

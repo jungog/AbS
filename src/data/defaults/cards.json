@@ -1,0 +1,698 @@
+[
+  {
+    "id": "c001",
+    "name": "锁定",
+    "color": "red",
+    "method": "cipher",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c002",
+    "name": "锁定",
+    "color": "blue",
+    "method": "direct",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c003",
+    "name": "锁定",
+    "color": "red",
+    "method": "cipher",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c004",
+    "name": "锁定",
+    "color": "blue",
+    "method": "text",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c005",
+    "name": "锁定",
+    "color": "black",
+    "method": "direct",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c006",
+    "name": "锁定",
+    "color": "red",
+    "method": "cipher",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c007",
+    "name": "锁定",
+    "color": "blue",
+    "method": "text",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c008",
+    "name": "锁定",
+    "color": "black",
+    "method": "direct",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c009",
+    "name": "锁定",
+    "color": "red",
+    "method": "cipher",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c010",
+    "name": "锁定",
+    "color": "blue",
+    "method": "text",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c011",
+    "name": "锁定",
+    "color": "black",
+    "method": "direct",
+    "fn": "lock",
+    "fnText": "与情报牌搭配打出，接收者必须收下该情报，不能拒收。"
+  },
+  {
+    "id": "c012",
+    "name": "截获",
+    "color": "red",
+    "method": "cipher",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c013",
+    "name": "截获",
+    "color": "blue",
+    "method": "text",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c014",
+    "name": "截获",
+    "color": "red",
+    "method": "cipher",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c015",
+    "name": "截获",
+    "color": "blue",
+    "method": "text",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c016",
+    "name": "截获",
+    "color": "black",
+    "method": "direct",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c017",
+    "name": "截获",
+    "color": "red",
+    "method": "cipher",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c018",
+    "name": "截获",
+    "color": "blue",
+    "method": "text",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c019",
+    "name": "截获",
+    "color": "black",
+    "method": "direct",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c020",
+    "name": "截获",
+    "color": "red",
+    "method": "cipher",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c021",
+    "name": "截获",
+    "color": "blue",
+    "method": "text",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c022",
+    "name": "截获",
+    "color": "black",
+    "method": "direct",
+    "fn": "intercept",
+    "fnText": "拿走正在传递中的情报牌，加入自己的手牌。"
+  },
+  {
+    "id": "c023",
+    "name": "退回",
+    "color": "red",
+    "method": "cipher",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c024",
+    "name": "退回",
+    "color": "blue",
+    "method": "text",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c025",
+    "name": "退回",
+    "color": "red",
+    "method": "cipher",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c026",
+    "name": "退回",
+    "color": "blue",
+    "method": "text",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c027",
+    "name": "退回",
+    "color": "black",
+    "method": "direct",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c028",
+    "name": "退回",
+    "color": "red",
+    "method": "cipher",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c029",
+    "name": "退回",
+    "color": "blue",
+    "method": "text",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c030",
+    "name": "退回",
+    "color": "black",
+    "method": "direct",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c031",
+    "name": "退回",
+    "color": "red",
+    "method": "cipher",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c032",
+    "name": "退回",
+    "color": "blue",
+    "method": "text",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c033",
+    "name": "退回",
+    "color": "black",
+    "method": "direct",
+    "fn": "return",
+    "fnText": "将自己刚收到的情报退回给上一个传出者。"
+  },
+  {
+    "id": "c034",
+    "name": "识破",
+    "color": "red",
+    "method": "cipher",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c035",
+    "name": "识破",
+    "color": "blue",
+    "method": "text",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c036",
+    "name": "识破",
+    "color": "red",
+    "method": "cipher",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c037",
+    "name": "识破",
+    "color": "blue",
+    "method": "text",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c038",
+    "name": "识破",
+    "color": "black",
+    "method": "direct",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c039",
+    "name": "识破",
+    "color": "red",
+    "method": "cipher",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c040",
+    "name": "识破",
+    "color": "blue",
+    "method": "text",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c041",
+    "name": "识破",
+    "color": "black",
+    "method": "direct",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c042",
+    "name": "识破",
+    "color": "red",
+    "method": "cipher",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c043",
+    "name": "识破",
+    "color": "blue",
+    "method": "text",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c044",
+    "name": "识破",
+    "color": "black",
+    "method": "direct",
+    "fn": "counter",
+    "fnText": "抵销场上最新打出的一张功能牌的效果。"
+  },
+  {
+    "id": "c045",
+    "name": "破译",
+    "color": "red",
+    "method": "cipher",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c046",
+    "name": "破译",
+    "color": "red",
+    "method": "text",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c047",
+    "name": "破译",
+    "color": "blue",
+    "method": "direct",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c048",
+    "name": "破译",
+    "color": "red",
+    "method": "cipher",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c049",
+    "name": "破译",
+    "color": "blue",
+    "method": "text",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c050",
+    "name": "破译",
+    "color": "black",
+    "method": "direct",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c051",
+    "name": "破译",
+    "color": "red",
+    "method": "cipher",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c052",
+    "name": "破译",
+    "color": "blue",
+    "method": "text",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c053",
+    "name": "破译",
+    "color": "black",
+    "method": "direct",
+    "fn": "decode",
+    "fnText": "私下查看一张朝下情报的实际内容，不可告知他人。"
+  },
+  {
+    "id": "c054",
+    "name": "烧毁",
+    "color": "blue",
+    "method": "cipher",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c055",
+    "name": "烧毁",
+    "color": "red",
+    "method": "text",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c056",
+    "name": "烧毁",
+    "color": "blue",
+    "method": "direct",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c057",
+    "name": "烧毁",
+    "color": "red",
+    "method": "cipher",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c058",
+    "name": "烧毁",
+    "color": "blue",
+    "method": "text",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c059",
+    "name": "烧毁",
+    "color": "black",
+    "method": "direct",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c060",
+    "name": "烧毁",
+    "color": "red",
+    "method": "cipher",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c061",
+    "name": "烧毁",
+    "color": "blue",
+    "method": "text",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c062",
+    "name": "烧毁",
+    "color": "black",
+    "method": "direct",
+    "fn": "burn",
+    "fnText": "弃掉场上任意一张黑色情报。"
+  },
+  {
+    "id": "c063",
+    "name": "调虎离山",
+    "color": "red",
+    "method": "cipher",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c064",
+    "name": "调虎离山",
+    "color": "blue",
+    "method": "text",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c065",
+    "name": "调虎离山",
+    "color": "black",
+    "method": "direct",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c066",
+    "name": "调虎离山",
+    "color": "red",
+    "method": "cipher",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c067",
+    "name": "调虎离山",
+    "color": "blue",
+    "method": "text",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c068",
+    "name": "调虎离山",
+    "color": "black",
+    "method": "direct",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c069",
+    "name": "调虎离山",
+    "color": "red",
+    "method": "cipher",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c070",
+    "name": "调虎离山",
+    "color": "blue",
+    "method": "text",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c071",
+    "name": "调虎离山",
+    "color": "black",
+    "method": "direct",
+    "fn": "lure",
+    "fnText": "指定一名玩家，本次情报传递中跳过该玩家。"
+  },
+  {
+    "id": "c072",
+    "name": "试探",
+    "color": "red",
+    "method": "text",
+    "fn": "probe",
+    "fnText": "指定一名玩家，得知其手牌中黑色（假情报）的数量，仅自己可见。"
+  },
+  {
+    "id": "c073",
+    "name": "试探",
+    "color": "blue",
+    "method": "direct",
+    "fn": "probe",
+    "fnText": "指定一名玩家，得知其手牌中黑色（假情报）的数量，仅自己可见。"
+  },
+  {
+    "id": "c074",
+    "name": "试探",
+    "color": "red",
+    "method": "cipher",
+    "fn": "probe",
+    "fnText": "指定一名玩家，得知其手牌中黑色（假情报）的数量，仅自己可见。"
+  },
+  {
+    "id": "c075",
+    "name": "试探",
+    "color": "blue",
+    "method": "text",
+    "fn": "probe",
+    "fnText": "指定一名玩家，得知其手牌中黑色（假情报）的数量，仅自己可见。"
+  },
+  {
+    "id": "c076",
+    "name": "试探",
+    "color": "black",
+    "method": "direct",
+    "fn": "probe",
+    "fnText": "指定一名玩家，得知其手牌中黑色（假情报）的数量，仅自己可见。"
+  },
+  {
+    "id": "c077",
+    "name": "试探",
+    "color": "red",
+    "method": "cipher",
+    "fn": "probe",
+    "fnText": "指定一名玩家，得知其手牌中黑色（假情报）的数量，仅自己可见。"
+  },
+  {
+    "id": "c078",
+    "name": "试探",
+    "color": "blue",
+    "method": "text",
+    "fn": "probe",
+    "fnText": "指定一名玩家，得知其手牌中黑色（假情报）的数量，仅自己可见。"
+  },
+  {
+    "id": "c079",
+    "name": "试探",
+    "color": "black",
+    "method": "direct",
+    "fn": "probe",
+    "fnText": "指定一名玩家，得知其手牌中黑色（假情报）的数量，仅自己可见。"
+  },
+  {
+    "id": "c080",
+    "name": "真伪莫辨",
+    "color": "red",
+    "method": "cipher",
+    "fn": "shuffle",
+    "fnText": "抽等同于存活人数的牌，朝下洗混后每人发一张，当作已打出的情报。"
+  },
+  {
+    "id": "c081",
+    "name": "真伪莫辨",
+    "color": "blue",
+    "method": "direct",
+    "fn": "shuffle",
+    "fnText": "抽等同于存活人数的牌，朝下洗混后每人发一张，当作已打出的情报。"
+  },
+  {
+    "id": "c082",
+    "name": "真伪莫辨",
+    "color": "red",
+    "method": "cipher",
+    "fn": "shuffle",
+    "fnText": "抽等同于存活人数的牌，朝下洗混后每人发一张，当作已打出的情报。"
+  },
+  {
+    "id": "c083",
+    "name": "真伪莫辨",
+    "color": "blue",
+    "method": "text",
+    "fn": "shuffle",
+    "fnText": "抽等同于存活人数的牌，朝下洗混后每人发一张，当作已打出的情报。"
+  },
+  {
+    "id": "c084",
+    "name": "真伪莫辨",
+    "color": "black",
+    "method": "direct",
+    "fn": "shuffle",
+    "fnText": "抽等同于存活人数的牌，朝下洗混后每人发一张，当作已打出的情报。"
+  },
+  {
+    "id": "c085",
+    "name": "真伪莫辨",
+    "color": "red",
+    "method": "cipher",
+    "fn": "shuffle",
+    "fnText": "抽等同于存活人数的牌，朝下洗混后每人发一张，当作已打出的情报。"
+  },
+  {
+    "id": "c086",
+    "name": "真伪莫辨",
+    "color": "blue",
+    "method": "text",
+    "fn": "shuffle",
+    "fnText": "抽等同于存活人数的牌，朝下洗混后每人发一张，当作已打出的情报。"
+  },
+  {
+    "id": "c087",
+    "name": "真伪莫辨",
+    "color": "black",
+    "method": "direct",
+    "fn": "shuffle",
+    "fnText": "抽等同于存活人数的牌，朝下洗混后每人发一张，当作已打出的情报。"
+  }
+]

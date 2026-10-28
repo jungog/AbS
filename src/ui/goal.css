@@ -1,0 +1,248 @@
+/* ================================================================== */
+/* 目标条：我要收什么颜色、还差几张、黑几张会死                        */
+/* ================================================================== */
+
+.goalbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid var(--rule);
+  border-left-width: 4px;
+  border-radius: 3px;
+  background: #fff;
+  padding: 7px 12px;
+  margin-bottom: 10px;
+  flex: none;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+/* 左侧色条用身份色 —— 这是整屏唯一「一眼就知道我是哪边」的位置 */
+.goalbar.red { border-left-color: var(--red); }
+.goalbar.blue { border-left-color: var(--blue); }
+.goalbar.agent { border-left-color: var(--gold); }
+
+.goal-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 1px 8px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+  flex: none;
+}
+.goal-tag.red { color: var(--red); background: var(--red-soft); }
+.goal-tag.blue { color: var(--blue); background: var(--blue-soft); }
+.goal-tag.agent { color: #8a6d33; background: #fbf6ea; }
+
+.goal-main { color: var(--ink2); }
+.goal-main b { color: var(--ink); }
+
+/* 进度格子：三格小方块，比「2/3」更容易一眼看出还差几张 */
+.goal-pips { display: inline-flex; gap: 3px; }
+.goal-pips i {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid var(--rule-2);
+  background: transparent;
+  display: block;
+}
+.goal-pips.red i.on { background: var(--red); border-color: var(--red); }
+.goal-pips.blue i.on { background: var(--blue); border-color: var(--blue); }
+
+.goal-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ink2);
+}
+.goal-num.done { color: var(--green); }
+
+.goal-black {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ink3);
+  font-variant-numeric: tabular-nums;
+}
+.goal-black.danger {
+  color: var(--red);
+  font-weight: 700;
+}
+.goal-black em {
+  font-style: normal;
+  margin-left: 4px;
+  font-size: 11.5px;
+}
+
+.goal-alt {
+  color: var(--ink3);
+  font-size: 12px;
+}
+
+/* ================================================================== */
+/* 我的情报条                                                          */
+/* ================================================================== */
+
+.intel-strip {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  flex: none;
+}
+.intel-strip-goal {
+  margin-left: 10px;
+  letter-spacing: 0;
+  font-weight: 700;
+  font-size: 11.5px;
+  padding: 0 6px;
+  border-radius: 2px;
+}
+.intel-strip-goal.red { color: var(--red); background: var(--red-soft); }
+.intel-strip-goal.blue { color: var(--blue); background: var(--blue-soft); }
+.intel-strip-note {
+  margin-left: 10px;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--ink3);
+  font-size: 11.5px;
+}
+
+.intel-cards {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  align-items: center;
+  min-height: 34px;
+}
+
+/* 情报卡：和手牌区分开 —— 手牌是白底竖排，情报是浅底横排小卡 */
+.intel-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--rule-2);
+  border-radius: 3px;
+  background: var(--paper);
+  padding: 4px 9px 4px 0;
+  font-size: 12px;
+  overflow: hidden;
+  max-width: 220px;
+  animation: chipPop 0.42s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.intel-card-bar {
+  width: 5px;
+  align-self: stretch;
+  margin: -4px 0;
+  flex: none;
+}
+.intel-card.red .intel-card-bar { background: var(--red); }
+.intel-card.blue .intel-card-bar { background: var(--blue); }
+.intel-card.black .intel-card-bar { background: var(--black); }
+
+.intel-card-name {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.intel-card-meta {
+  color: var(--ink3);
+  font-size: 11px;
+  white-space: nowrap;
+}
+/* 命中目标颜色的情报：金边标出来，一眼能数「还差几张」 */
+.intel-card.goal {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(168, 137, 79, 0.3);
+}
+
+/* 自己玩家卡上的目标进度 */
+.pcard-goal {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.pcard-goal.red { color: var(--red); }
+.pcard-goal.blue { color: var(--blue); }
+
+/* ================================================================== */
+/* 接收决策时的说明行                                                  */
+/* ================================================================== */
+
+.recv-info {
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.recv-color {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 2px;
+  border: 1px solid currentColor;
+}
+.recv-color.red { color: var(--red); background: var(--red-soft); }
+.recv-color.blue { color: var(--blue); background: var(--blue-soft); }
+.recv-color.black { color: #fff; background: var(--black); border-color: var(--black); }
+/* 牌面朝下：用虚线框表示「还不知道」，不要做成醒目的色块 */
+.recv-color.unknown {
+  color: var(--ink3);
+  border-style: dashed;
+  background: transparent;
+  font-weight: 400;
+}
+
+/* 会吃亏的提示：红色，但不做成报错那种刺眼 */
+.hint.warn {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* 矮屏：目标条太贵（360×640 上整屏才 640）。压行高和内边距。
+ *
+ * 关键是 **row-gap**：特工的长任务在 360 宽上折成 4 行，3 个 8px 的行间距
+ * 就是 24px —— 比字号本身还值钱。行距收到 2px、内边距收到 3px 之后，
+ * 最长的那条文案（`noBlackWith`，见 core/tasks.ts）从 95px 降到 ~76px，
+ * 第一排座位卡的身份行才露在吸底操作区上面。
+ * 不截断文案：任务是对局目标，看不全等于没法玩。
+ */
+@media (max-height: 700px) {
+  .goalbar {
+    padding: 3px 9px;
+    gap: 2px 8px;
+    font-size: 11.5px;
+    line-height: 1.35;
+    margin-bottom: 6px;
+    /* 块级流：原来 flex-wrap 下「标签」是独立 flex 项，360 宽上它（55px）
+       和正文（301px）挤不进一行，于是标签独占一行 —— 白占 22px，还让正文
+       提前换行。块级流 + 标签 inline-block 之后标签并进正文首行，
+       最长任务文案从 97px 降到 62px，第一排座位卡的身份行才有 33px 余量
+       露在吸底操作区上面。字号不动（11.5px）、文案不截断。 */
+    display: block;
+  }
+  .goal-tag {
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .action-gap { height: 6px; }
+  /* 情报条只收内外边距，**不隐藏任何文案**。
+     原本想把「收下的情报放在面前，不进手牌」这句和空态提示在矮屏上藏掉（能省 58px），
+     量了之后发现是白省：360×640 上情报条在吸底操作区**下面、屏幕外**
+     （实测 top 945，滚动容器只有 486 高），压缩它对「牌板露出多少」毫无影响。
+     省不到东西就不该拿说明文字去换。 */
+  .intel-strip { margin-top: 6px; padding-top: 6px; }
+  /* 房间条（房间号 + 联机 + 离开）：它的高度几乎全由「离开」按钮撑起来，
+     而那个按钮必须留 ≥32px 的点击高度（手指点得准，见 check:viewports 的
+     点击目标断言）。所以这里只收横向间距，不动按钮高度 ——
+     试过把按钮内边距压到 3px，省下 9px，但按钮变成 44×24，当场被点击目标
+     断言抓住，那才是真问题。 */
+  .room-strip { gap: 6px; }
+  /* 房间页底部那 60px 留白在矮屏上是纯浪费 —— 它自己就占了
+     844×390 那 248px 溢出的 1/4（28px 顶部 + 60px 底部 = 88px）。
+     收到 12px 之后，吸底的 `.room-actions` 才能贴住底边：
+     留 60px 的话滚到最底时它会在最后 60px 里突然往上跳一下。 */
+  .room { padding-bottom: 12px; }
+}

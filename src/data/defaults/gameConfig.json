@@ -1,0 +1,15 @@
+{
+  "handLimit": 6,
+  "startHand": 3,
+  "drawPerTurn": 2,
+  "winIntelCount": 3,
+  "agentWinIntelCount": 6,
+  "deathBlackCount": 3,
+  "seats": {
+    "3": { "red": 1, "blue": 1, "agent": 1 },
+    "4": { "red": 2, "blue": 1, "agent": 1 },
+    "5": { "red": 2, "blue": 2, "agent": 1 },
+    "6": { "red": 2, "blue": 2, "agent": 2 },
+    "7": { "red": 3, "blue": 3, "agent": 1 }
+  }
+}

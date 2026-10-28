@@ -1,0 +1,14 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 运行期数据（房间快照）—— 重启恢复用，不该进版本库
+.abs-data/
+
+# 验收截图
+shots/
+
+# 编辑器
+.vscode/
+.idea/
+*.log
