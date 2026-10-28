@@ -925,9 +925,11 @@ async function main(): Promise<void> {
   root2.render(createElement(App));
   await sleep(140);
 
-  const tab2 = $$('.tabs-line button').find((b) => (b.textContent ?? '').includes('联机对局'));
-  await click(tab2 ?? null);
-  await sleep(140);
+  // 这里以前先 click 一下「联机对局」再断言 —— 等于测试替用户切了页签，
+  // 「?room= 根本没被读」的 bug 就一直藏在这一行后面（实测公网点邀请链接
+  // 打开的是「单人 + AI 陪练」选人页）。朋友点链接时没人替他切页签。
+  check('邀请链接直接落在联机大厅（不用手动切页签）', Boolean($('.lobby')), bodyText().slice(0, 60));
+  check('邀请链接不会停在本地对局页', !bodyText().includes('单人 + AI 陪练'), bodyText().slice(0, 60));
 
   check('邀请链接带进来的房间号已填好', (($('input[placeholder="例如 A3KP"]') as HTMLInputElement | null)?.value ?? '') === 'B7QZ');
   check('地址栏里的邀请参数被消费掉', w.location.search === '', w.location.search);
@@ -941,9 +943,38 @@ async function main(): Promise<void> {
   check('记住过昵称的人点链接直接进房', inviteJoin?.room === 'B7QZ', JSON.stringify(inviteJoin));
   check('自动加入用的是记住的昵称', inviteJoin?.name === '老玩家', inviteJoin?.name);
 
+  /* ---------------- 13b. 邀请链接 + 第一次来的人 ---------------- */
+  // 这才是「把游戏发给朋友」的真实路径：对方 localStorage 是空的，
+  // 既没有昵称也没有房间记忆。他应该停在联机大厅的邀请提示条上，
+  // 提示条里直接有个「以「玩家」加入」的按钮（手机不用往下滚）。
+  root2.unmount();
+  await sleep(100);
+  w.localStorage.clear();
+  w.history.replaceState(null, '', '/?room=B7QZ');
+
+  const root2b = createRoot(container);
+  root2b.render(createElement(App));
+  await sleep(140);
+
+  check('第一次来的人也直接落在联机大厅', Boolean($('.lobby')), bodyText().slice(0, 60));
+  const inviteBtn = $('.invite-notice button.primary');
+  check('邀请提示条里有「加入」按钮（手机不用往下滚）', Boolean(inviteBtn), inviteBtn?.textContent ?? '(无)');
+  check('按钮上写明了会用什么昵称入座', (inviteBtn?.textContent ?? '').includes('玩家'), inviteBtn?.textContent ?? '');
+
+  const ws5b = MockWS.live;
+  ws5b!.emit({ t: 'lobby', rooms: [] });
+  await sleep(160);
+  if (inviteBtn) await click(inviteBtn);
+  await sleep(160);
+
+  const firstJoin = ws5b!.lastOf<{ room: string; name: string }>('join');
+  check('点提示条上的按钮直接进房', firstJoin?.room === 'B7QZ', JSON.stringify(firstJoin));
+  check('第一次来的人用默认昵称入座', firstJoin?.name === '玩家', firstJoin?.name);
+  check('进房后地址栏仍然是干净的', w.location.search === '', w.location.search);
+
   /* ---------------- 14. 建房带密码 ---------------- */
   // 重挂一次，回到干净的大厅
-  root2.unmount();
+  root2b.unmount();
   await sleep(100);
   w.localStorage.clear();
   w.history.replaceState(null, '', '/');

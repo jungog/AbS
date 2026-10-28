@@ -44,6 +44,23 @@ async function openLobby(p: Page, name: string): Promise<void> {
   await sleep(500);
 }
 
+/**
+ * 轮询到条件成立为止（默认最多 15 秒），返回是否等到。
+ *
+ * 原来这里是 `await sleep(600)` 然后一次性数座位 —— 本地 RTT 下够用，
+ * 但对着 Render 免费层实测会**假红**：乙已经进房了，房主那边的状态还没推过来，
+ * 数出来只有 1 个座位（实测 13/15，本地 15/15，同一个脚本）。
+ * 断言应该等「事实发生」，而不是赌「600ms 够了」。
+ */
+async function until(fn: () => Promise<boolean>, timeoutMs = 15_000): Promise<boolean> {
+  const t0 = Date.now();
+  for (;;) {
+    if (await fn()) return true;
+    if (Date.now() - t0 > timeoutMs) return false;
+    await sleep(250);
+  }
+}
+
 /** 走一步：选角 → 结束出牌 / 收下 / 放弃响应 → 传情报 / 弃牌 */
 async function step(p: Page): Promise<boolean> {
   const pick = p.locator('.pick-card').first();
@@ -101,6 +118,44 @@ async function main(): Promise<void> {
   const code = ((await a.locator('.room-bigcode').textContent()) ?? '').trim();
   check('拿到房间号', /^[A-Z0-9]{4,8}$/.test(code), code);
 
+  // —— 邀请链接：朋友第一次点开时，localStorage 是空的 ——
+  // 这条链路以前没有任何断言守着。ui-online 里的邀请用例是「先手动点一下
+  // 『联机对局』再断言房间号已填好」—— 测试替用户切了页签，于是
+  // 「`?room=` 根本没被读到、直接停在本地对局页」藏了很久（公网上就是这样）。
+  // 这里开一个全新上下文（= 一个从没来过的人），只做只读检查，不动房间状态。
+  console.log('1b) 邀请链接：全新浏览器直接打开 ?room=' + code);
+  const ctxC = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const c = await ctxC.newPage();
+  c.on('pageerror', (e) => errors.push(`C pageerror: ${e.message}`));
+  await c.goto(`${URL}?room=${code}`, { waitUntil: 'domcontentloaded' });
+  const landed = await until(async () => (await c.locator('.lobby').count()) > 0, 20_000);
+  check(
+    '邀请链接直接落在联机大厅（不用手动切页签）',
+    landed,
+    (await c.locator('body').innerText().catch(() => '')).slice(0, 80).replace(/\s+/g, ' '),
+  );
+  const prefilled = await c
+    .locator('input[placeholder="例如 A3KP"]')
+    .inputValue()
+    .catch(() => '');
+  check('邀请链接把房间号填好了', prefilled === code, `${prefilled} vs ${code}`);
+  const noticeText = await c.locator('.invite-notice').innerText().catch(() => '');
+  check('邀请提示条认出了房间号', noticeText.includes(code), noticeText.replace(/\s+/g, ' '));
+  check('地址栏里的邀请参数被消费掉', !c.url().includes('room='), c.url());
+
+  // 提示条里现在有两个按钮，而 `.notice` 是**不换行**的 flex：
+  // 不管住的话，360px 上主按钮被压成 73×67，文案「以「玩家」加入」折成竖排三行。
+  // 判据用「按钮不许被压窄、也不许被压高」，比截图比对稳定。
+  await c.setViewportSize({ width: 360, height: 640 });
+  await sleep(200);
+  const narrowBtn = await c.locator('.invite-notice button.primary').boundingBox();
+  check(
+    '窄屏（360）上邀请按钮没被压扁',
+    Boolean(narrowBtn) && narrowBtn!.width >= 90 && narrowBtn!.height <= 40,
+    narrowBtn ? `${narrowBtn.width.toFixed(0)}x${narrowBtn.height.toFixed(0)}` : '无',
+  );
+  await ctxC.close();
+
   await openLobby(b, '乙');
   await b.locator('input[placeholder="例如 A3KP"]').fill(code);
   await b.locator('.field-inline button', { hasText: '加入' }).click();
@@ -108,10 +163,14 @@ async function main(): Promise<void> {
   const codeB = ((await b.locator('.room-bigcode').textContent()) ?? '').trim();
   check('乙进的是同一个房间', codeB === code, `${code} vs ${codeB}`);
 
-  // 双方座位表里都应该看到两个人
-  await sleep(600);
-  const seatsA = await a.locator('.seat:not(.empty) .seat-name').count();
-  check('房主看到 2 个座位', seatsA >= 2, seatsA);
+  // 双方座位表里都应该看到两个人。乙那边 `.room-bigcode` 已经出现了，
+  // 但房主这边的座位表要等一次服务端推送 —— 公网上这个间隔可能是几百毫秒到几秒。
+  let seatsA = 0;
+  const twoSeats = await until(async () => {
+    seatsA = await a.locator('.seat:not(.empty) .seat-name').count();
+    return seatsA >= 2;
+  });
+  check('房主看到 2 个座位', twoSeats, `${seatsA}（等了最多 15 秒）`);
 
   console.log('2) 房主开局');
   await a.locator('button', { hasText: '开始对局' }).click();
@@ -136,11 +195,40 @@ async function main(): Promise<void> {
   check('对局产生了日志', logA > 0, logA);
 
   // 双方视角必须各自独立：手牌只出现在自己的常驻手牌条里（.hand-strip），
-  // 别人的手牌只显示「手牌 3」这种张数。用 .actionbar .hand 是不行的 ——
-  // 那条只在「轮到你操作」时存在，选角阶段两边都是空的。
-  const handA = await a.locator('.hand-strip .card').count();
-  const handB = await b.locator('.hand-strip .card').count();
-  check('两名玩家各自拿到了手牌', handA > 0 && handB > 0, `${handA} / ${handB}`);
+  // 别人的手牌只显示「手牌 3」这种张数。
+  //
+  // **两种形态都要数**：轮到自己时 `.hand-strip` 会被操作区（`.actionbar .hand`）替换掉，
+  // 只数 hand-strip 就会把「正轮到自己」误判成「没有手牌」。
+  // 公网实测就是栽在这儿（3 / 0）：本地节奏里乙恰好还在等，公网上乙已经轮到自己了。
+  const countHand = async (p: Page): Promise<number> =>
+    (await p.locator('.hand-strip .card').count()) + (await p.locator('.actionbar .hand .card').count());
+  let handA = 0;
+  let handB = 0;
+  const bothHands = await until(async () => {
+    // 乙可能一直停在选角面板上 —— 上面那 12 轮循环是「按次数」推进的，
+    // 公网慢的时候根本轮不到乙选角，它就一直没手牌（实测 3 / 0，等 15 秒也不动）。
+    // 这里在轮询里顺手替它点一下，而不是靠循环次数碰运气。
+    const pick = b.locator('.pick-card').first();
+    if ((await pick.count()) > 0) await pick.click().catch(() => undefined);
+    handA = await countHand(a);
+    handB = await countHand(b);
+    return handA > 0 && handB > 0;
+  });
+  check('两名玩家各自拿到了手牌', bothHands, `${handA} / ${handB}（等了最多 15 秒）`);
+  if (!bothHands) {
+    // 失败时把乙的现场打出来 —— 公网验收最怕「只看到一个数字」，分不清是
+    // 还在选角、掉线回大厅、还是渲染层出问题。
+    const dbg = await b.evaluate(`(() => ({
+      battle: !!document.querySelector('.battle'),
+      pick: document.querySelectorAll('.pick-card').length,
+      strip: document.querySelectorAll('.hand-strip .card').length,
+      bar: document.querySelectorAll('.actionbar .hand .card').length,
+      waiting: !!document.querySelector('.actionbar.waiting'),
+      overlay: !!document.querySelector('.overlay'),
+      connecting: (document.body.innerText || '').includes('正在连接'),
+    }))()`);
+    console.log('  · 乙的现场:', JSON.stringify(dbg));
+  }
 
   console.log('4) 对局中有人离开（真浏览器）');
   // 这条只有真浏览器能验：服务端要下发 left 标记 + 往对局日志写一行，

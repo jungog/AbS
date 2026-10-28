@@ -23,7 +23,7 @@ import {
 } from '@ui/components/OnlineChrome';
 import { LobbyPage } from '@ui/pages/LobbyPage';
 import { RoomPage } from '@ui/pages/RoomPage';
-import { lastRoom } from '@net/protocol';
+import { inviteRoomFromUrl, lastRoom } from '@net/protocol';
 import { PUBLIC_VIEW } from '@core/redact';
 import type { RedactedState } from '@core/redact';
 import type { Command } from '@core/types';
@@ -423,7 +423,17 @@ export function BattlePage() {
   const online = useOnlineGame();
   // 刷新页面时如果还有没失效的座位，直接落在联机页 —— 否则 hook 会悄悄回座，
   // 用户却还停在「本地对局」，看起来像是卡住了
-  const [tab, setTab] = useState<'local' | 'online'>(() => (lastRoom() ? 'online' : 'local'));
+  //
+  // 邀请链接（`?room=ABCD`）同样要落在联机页，而且这一条比上面那条更硬：
+  // 朋友点链接进来时 localStorage 是**空的**，`lastRoom()` 必然为 null，
+  // 于是默认落到「本地对局」—— 而 `LobbyPage` 只有在 tab==='online' 时才挂载，
+  // 它里面的 `inviteRoomFromUrl()` 一次都不会跑。表现为「点邀请链接，
+  // 打开的是单人 AI 陪练的选人页」，房间号连读都没读到。
+  // 这条路径以前一直被测试遮着：ui-online / shots-spectate 都是先手动点一下
+  // 「联机对局」再断言房间号已填好 —— 测试替用户切了页签，bug 就藏住了。
+  const [tab, setTab] = useState<'local' | 'online'>(() =>
+    lastRoom() || inviteRoomFromUrl() ? 'online' : 'local',
+  );
 
   // 联机一旦进了对局，就不给切走的机会（切走等于掉线）
   const lockedInOnlineGame = tab === 'online' && online.started && online.view;

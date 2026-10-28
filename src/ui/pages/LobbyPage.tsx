@@ -9,8 +9,10 @@
  * 因为藏起来的话，朋友连「我要进哪个房」都不知道。
  *
  * 邀请链接：`?room=ABCD`。已经记住昵称的人点开链接会直接进房（邀请的意图很明确），
- * 第一次来的人只把房间号填好、光标停在昵称框上 —— 强行用「玩家」这个名字入座，
- * 以后在座位表里谁都认不出谁。
+ * 第一次来的人停在顶部的邀请提示条上：房间号已经填好，提示条里就有「加入房间」按钮，
+ * 手机上不用往下滚去够输入框 —— 但按钮上会写清用的是哪个昵称（默认「玩家」），
+ * 不想顶着「玩家」入座的人可以先到下面改名字。
+ * 不做「自动用 玩家 入座」：以后在座位表里谁都认不出谁。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { clearInviteParam, inviteRoomFromUrl } from '@net/protocol';
@@ -136,8 +138,19 @@ export function LobbyPage(props: { online: OnlineGame }) {
         <div className="notice invite-notice">
           <span>
             邀请链接：房间 <strong>{invited}</strong>
-            {rememberedName() ? '，正在进入…' : '，填好昵称后点「加入」即可'}
+            {rememberedName()
+              ? '，正在进入…'
+              : `，昵称「${displayName}」（可在下方修改）`}
           </span>
+          {/* 第一次来的人不会被自动拉进房（他还没有昵称），
+              但「用房间号加入」的输入框在手机上是第二屏 —— 提示条里直接给一个按钮，
+              点一下就进。按钮文案带上昵称，是因为这里入座用的就是它，
+              不能让人稀里糊涂顶着「玩家」进去。 */}
+          {!rememberedName() && (
+            <button className="primary" onClick={() => doJoin(invited)} disabled={!connected}>
+              以「{displayName}」加入
+            </button>
+          )}
           <button
             className="ghost"
             onClick={() => {

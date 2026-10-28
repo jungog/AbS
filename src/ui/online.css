@@ -830,10 +830,37 @@ button.wide {
   flex-wrap: wrap;
 }
 
+/* 提示条里现在可能有两个按钮（「以「玩家」加入」/「先不加入」）。
+ * `.notice` 是不换行的 flex，窄屏上它会直接把按钮压扁：实测 360px 下
+ * 主按钮只剩 73×67，文案「以「玩家」加入」被折成竖排三行，旁边那个
+ * 「先不加入」也变成一根竖条。规则：按钮不缩、不折；文字优先让出整行。 */
 .invite-notice {
   border-color: #ddd0b0;
   background: #fbf6ea;
   color: var(--ink);
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.invite-notice > span {
+  /* 必须 grow：`.notice` 是 space-between，文字不长的时候剩余空间会被
+   * 摊到「文字 / 按钮 / 按钮」三份里，两个按钮被分到条的两头，
+   * 主按钮孤零零挂在中间（实测 844 宽）。让文字吃掉剩余空间，按钮就挨在一起靠右。 */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.invite-notice > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  /* 文字独占一行、按钮另起一行靠左。只靠 flex-basis 算的话，
+   * 390px 上刚好只把第二个按钮挤下去，留一个孤零零的「先不加入」。 */
+  .invite-notice {
+    justify-content: flex-start;
+  }
+  .invite-notice > span {
+    flex: 1 1 100%;
+  }
 }
 
 
