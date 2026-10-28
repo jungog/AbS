@@ -129,6 +129,8 @@ export function PlayerCard(props: {
    * 卡片是常驻的。掉线的人不标（他 5 分钟内会回来）。
    */
   left?: boolean;
+  /** 要不要显示「AI」徽标。全员都是 AI 时传 false —— 那时它区分不了任何东西，只会挤掉玩家名 */
+  showBot?: boolean;
 }) {
   const { player } = props;
   const identityCls =
@@ -143,7 +145,7 @@ export function PlayerCard(props: {
       <div className="pcard-head">
         <span className="pcard-seat">{player.seat + 1}</span>
         <span className="pcard-name">{player.name}</span>
-        {player.isBot && <span className="pcard-bot">AI</span>}
+        {props.showBot !== false && player.isBot && <span className="pcard-bot">AI</span>}
         {props.left && <span className="tag gone">已离开</span>}
         {player.identity ? (
           <span className={`tag ${identityCls}`}>{IDENTITY_LABEL[player.identity]}</span>
@@ -158,7 +160,23 @@ export function PlayerCard(props: {
       </div>
       <IntelChips player={player} />
       <div className="pcard-foot">
-        <span>手牌 {player.handCount}</span>
+        {/*
+          `player.hand` 只有「自己」和「上帝视角」才非 null（见 core/redact.ts）。
+          以前这里只印张数，于是上帝视角承诺的「手牌全公开」其实只公开了**数量** ——
+          数据在 `view` 里躺着，界面上一个地方都没用。
+          用 title 而不是把手牌铺进卡里：座位卡在 360 宽上只有 157px，
+          铺开会把卡片撑高、并挤掉下面「黑 0/3」那行。hover 能看到牌名就够了，
+          这个模式本来就是在桌面上用的。
+        */}
+        <span
+          title={
+            player.hand
+              ? player.hand.map((c) => PACK.cardById.get(c.defId)?.name ?? c.defId).join('、')
+              : undefined
+          }
+        >
+          手牌 {player.handCount}
+        </span>
         {props.isSelf && player.identity && player.identity !== 'agent' ? (
           // 自己身上直接显示「离目标还差几张」，比原始计数有用得多
           <span className={`pcard-goal ${player.identity}`}>

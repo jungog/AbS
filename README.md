@@ -111,6 +111,7 @@ npm run build         # 生产构建
 npm run check:play    # 打开链接 → 单人 + AI → 真操作 6 步 → 断言无控制台报错
 npm run check:online  # 两个独立浏览器上下文 → 建房/加入/开局 → 各走几步 → 中途有人离开（单端口生产构建）
 npm run check:multi   # 邀请链接的两条真实路径：带密码的房间 / 3 人局（第三个玩家点链接进来）
+npm run check:local   # 本地三种模式：上帝视角会自己往下走、热座不会自己跑、单人 + AI 能轮到人
 npm run check:restart # 自己起服务端 → 开局 → 杀进程 → 重启 → 断言客户端自己连回来还能出牌
 
 # 视觉自查（要先把 npm run dev + npm run server 跑起来）

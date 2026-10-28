@@ -32,7 +32,20 @@ export function useLocalGame(): LocalGame {
     setMode(opts.mode);
     const players = Array.from({ length: opts.playerCount }, (_, i) => ({
       name: opts.mode === 'ai' ? (i === 0 ? '你' : `AI-${i}`) : `玩家 ${i + 1}`,
-      isBot: opts.mode === 'ai' ? i > 0 : false,
+      /**
+       * 上帝视角下**所有人都是 AI**。
+       *
+       * 这个模式原来把 `isBot` 一律设成 false，但 `viewerId` 又是 null
+       * （`redactState` 用 null 表示全公开），于是：
+       *   - `isMyTurn = pending.player === viewerId` 恒为 false ⇒ 没有操作面板
+       *   - 下面那个 AI effect 的 `if (!actor?.isBot) return` 也恒为真 ⇒ 没有 AI 代打
+       * 两条路都堵死，第一个 pending（选角）永远没人应答。实测 5 人局：
+       * t=1s 与 t=9s 的状态完全一致（第 1 轮 / 等待：玩家 1 / 5 张卡全「待选角色」），
+       * 而模式文案写着「用来观察规则流程与调试」—— 一个永远停在第一步的流程。
+       *
+       * 让它全 AI 之后，这个模式才真的等于「看一局自动打完、并且什么都看得见」。
+       */
+      isBot: opts.mode === 'ai' ? i > 0 : opts.mode === 'god',
     }));
     try {
       setGame(createGame({ pack: PACK, players }));
