@@ -449,11 +449,23 @@ async function main(): Promise<void> {
   noPw.send({ t: 'join', room: pwHost.room, name: '没带密码' });
   await noPw.waitFor(() => noPw.errors.length > 0, 2500, '无密码被拒');
   check('没带密码进不去', noPw.errors.some((m) => m.includes('密码')), noPw.errors.join('|'));
+  // 「没填」和「填错了」必须是两句不同的话。点邀请链接进来的人从没看见过
+  // 密码输入框，收到「密码不对」只会一头雾水：他不知道要密码、也不知道去哪填。
+  check(
+    '没带密码时说的是「设了密码」，不是「密码不对」',
+    noPw.errors.some((m) => m.includes('设了密码')) && !noPw.errors.some((m) => m.includes('不对')),
+    noPw.errors.join('|'),
+  );
 
   const wrongPw = await connect('密码错');
   wrongPw.send({ t: 'join', room: pwHost.room, name: '密码错', password: '0000' });
   await wrongPw.waitFor(() => wrongPw.errors.length > 0, 2500, '错密码被拒');
   check('密码不对进不去', wrongPw.errors.some((m) => m.includes('密码')), wrongPw.errors.join('|'));
+  check(
+    '填错密码时说的是「密码不对」',
+    wrongPw.errors.some((m) => m.includes('不对')) && !wrongPw.errors.some((m) => m.includes('设了密码')),
+    wrongPw.errors.join('|'),
+  );
 
   const rightPw = await connect('密码对');
   rightPw.send({ t: 'join', room: pwHost.room, name: '密码对', password: '8888' });

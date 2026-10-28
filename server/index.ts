@@ -292,6 +292,10 @@ function seatOfPlayer(room: Room, playerId: string): Seat | null {
 function checkPassword(room: Room, input: unknown): string | null {
   if (room.password === null) return null;
   const got = typeof input === 'string' ? input : '';
+  // 「没填」和「填错了」必须分开说。原来两种情况都是「房间密码不对。」——
+  // 点邀请链接进来的人根本没看到过密码输入框，收到「密码不对」只会一头雾水：
+  // 他不知道这个房间要密码，也不知道该去哪儿填。
+  if (!got) return '这个房间设了密码，请先填房间密码。';
   if (got !== room.password) return '房间密码不对。';
   return null;
 }

@@ -134,6 +134,17 @@ function BattleShell(props: {
                 acting={p.id === actorId}
                 isSelf={p.id === viewerId}
                 left={props.leftIds?.has(p.id)}
+                /*
+                 * 「AI」徽标的作用是**把 AI 座位和真人座位区分开**。
+                 * 全是 AI 的时候它区分不了任何东西，却要在卡头里再占一格 ——
+                 * 360 宽实测（上帝视角改成全 AI 自动推进之后）：
+                 * 卡宽 157px，卡头里「座位号 + 玩家 N + AI + 身份标签」放不下，
+                 * 玩家名被压成「玩…」（第 2/3/4 张卡；第 1 张逃过是因为它的
+                 * 身份标签「特工」比「军情局」窄两个字）。
+                 * 按**数据**判断而不是按模式判断：以后谁把某个模式改成全 AI，
+                 * 这条规则自动跟上，不需要再记得改这里。
+                 */
+                showBot={!view.players.every((x) => x.isBot)}
               />
             ))}
           </div>
@@ -272,7 +283,9 @@ function LaunchLocal(props: {
         </select>
       </div>
 
-      {mode === 'ai' && (
+      {/* 上帝视角现在也是全 AI 自动推进（见 useLocalGame.start），
+          所以同样需要调速 —— 否则只能用 280ms 跑完一局，看不细。 */}
+      {(mode === 'ai' || mode === 'god') && (
         <div className="field">
           <label>AI 速度</label>
           <select value={props.speed} onChange={(e) => props.setSpeed(Number(e.target.value))}>

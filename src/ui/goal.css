@@ -58,6 +58,25 @@
 }
 .goal-num.done { color: var(--green); }
 
+/* 目标条里这三块是**原子信息**，不许在中间折断。
+ *
+ * `.goalbar` 是 flex 容器，这三块都是 flex 子项，默认 `flex-shrink: 1` ——
+ * 它们会缩到 **min-content** 才停，而带空格的文字 min-content 就是「最长的一个词」：
+ * 「红 0/3」的空格是合法折点，「或集齐 6 张真情报（红蓝皆可）· 当前 0/6」
+ * 的空格同理。360×640 实测（用 Range 数行盒）：
+ *   红身份  `.goal-num`  跨 **2** 行 ——「红」留在第一行、「0/3」被甩到第二行开头
+ *   特工    `.goal-alt`  跨 **2** 行 ——「… · 当前 0」/「/6」，把 0/6 劈开了
+ *   蓝身份  `.goal-num` 只有 1 行，但被挤到第一行末尾，「黑色 0/3」单独第二行
+ * 390 宽上不触发（宽度刚好够整块折下去）。
+ *
+ * 加 nowrap 之后 min-content = 整段文字宽度，flex 只能把**整块**折到下一行 ——
+ * 于是两个数字块一起落到第二行（和 390 上本来就正确的排法一致）。 */
+.goal-num,
+.goal-black,
+.goal-alt {
+  white-space: nowrap;
+}
+
 .goal-black {
   margin-left: auto;
   font-size: 12px;
@@ -224,9 +243,20 @@
   }
   .goal-tag {
     display: inline-block;
-    margin-right: 6px;
     vertical-align: 1px;
   }
+  /* 上面把容器改成 `display: block` 之后，`gap` 就**整条失效**了 ——
+     而 `.goal-black { margin-left: auto }` 在 inline 元素上按规范解析成 0
+     （auto 只对块级/替换元素有意义）。结果目标条里所有相邻块零间距粘成一串，
+     360×640 截图读作「红 0/3黑色 0/3」，「…3 张红色情报」和三个进度方块也贴死。
+     实测相邻间距（getClientRects 逐行取）：
+       修前  tag→main 6px（来自 .goal-tag 自己的 margin-right）、
+             main→pips 0、pips→num 0、num→black 0
+       修后  全部 8px（= 上面 `gap: 2px 8px` 里那个列间距）
+     高度不变：360×640 修前修后都是 44px，844×390 都是 28px ——
+     这 8px 是从行尾的空白里挪出来的，没有多折一行。
+     用相邻兄弟选择器补，而不是逐个类名写 margin —— 以后往目标条里加块不用再改这里。 */
+  .goalbar > * + * { margin-left: 8px; }
   .action-gap { height: 6px; }
   /* 情报条只收内外边距，**不隐藏任何文案**。
      原本想把「收下的情报放在面前，不进手牌」这句和空态提示在矮屏上藏掉（能省 58px），

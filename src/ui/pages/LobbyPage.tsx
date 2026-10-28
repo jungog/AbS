@@ -75,6 +75,13 @@ export function LobbyPage(props: { online: OnlineGame }) {
   const displayName = useMemo(() => name.trim() || '玩家', [name]);
 
   const doJoin = (code: string) => {
+    // 手动加入 = 「这条邀请已经处理过了」，把自动加入的一次性开关关掉。
+    //
+    // 不关的话会补发一个**不带密码**的 join：doJoin 里 rememberName 写进了
+    // localStorage，而下面那个自动加入的 effect 依赖 `online`（每次渲染都是新对象）
+    // 会再跑一遍 —— 它看到「有记住的昵称」就直接 joinRoom，密码参数是空的。
+    // 第二次请求会把第一次的结果盖掉（实测：填了 8888 却被判「设了密码」）。
+    autoJoinRef.current = true;
     rememberName(displayName);
     online.joinRoom(code, displayName, joinPw.trim() || undefined);
   };
@@ -119,6 +126,63 @@ export function LobbyPage(props: { online: OnlineGame }) {
     online.joinRoom(invited, saved);
   }, [invited, online]);
 
+  /**
+   * 邀请进来的房间被密码挡住了。
+   *
+   * 服务端对「没填密码」和「填错了」说的是两句不同的话（见 server 的 checkPassword），
+   * 这里只看「有没有被密码拦下」这一件事，所以两种都算。
+   */
+  const pwRequired = Boolean(invited && online.error && online.error.includes('密码'));
+
+  /** 把光标送到房间密码框 —— 手机上它在大厅第二屏，只写一句提示不滚过去等于没提示 */
+  const focusJoinPw = () => {
+    const el = pwRef.current;
+    if (!el) return;
+    // jsdom（ui-online 单测跑在这里）没有 scrollIntoView，真浏览器都有。
+    // 不加这个守卫，单测里一被密码拦住就整个进程崩掉。
+    el.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    el.focus({ preventScroll: true });
+  };
+
+  // 被密码拦住时自动滚过去一次。只做一次：用户在别处点来点去时不该被反复拽回来。
+  const pwPromptedRef = useRef(false);
+  useEffect(() => {
+    if (!pwRequired || pwPromptedRef.current) return;
+    pwPromptedRef.current = true;
+    setPwHint(`「${invited}」设了密码，填好下面的密码就能进`);
+    focusJoinPw();
+    // focusJoinPw 每次渲染都是新函数，放进依赖会让这个 effect 反复跑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pwRequired, invited]);
+
+  /**
+   * 邀请提示条上的主动作。
+   *
+   * 三种状态：还没被拦 → 直接加入（第一次来的人只有这个按钮，手机不用往下滚）；
+   * 被密码拦住且密码框还空着 → 「填写密码」（点了就把光标送过去，而不是再发一次注定被拒的请求）；
+   * 密码填了 → 回到「加入」，这时 joinPw 会被一起带上。
+   */
+  const inviteAction = (() => {
+    if (!invited) return null;
+    if (pwRequired && !joinPw.trim()) {
+      return (
+        <button className="primary" onClick={focusJoinPw} disabled={!connected}>
+          填写密码
+        </button>
+      );
+    }
+    // 记住过昵称的人正常情况下会被自动拉进房，没有按钮；
+    // 但他也可能被密码拦住，那时同样需要这个按钮来重试。
+    if (!rememberedName() || pwRequired) {
+      return (
+        <button className="primary" onClick={() => doJoin(invited)} disabled={!connected}>
+          以「{displayName}」加入
+        </button>
+      );
+    }
+    return null;
+  })();
+
   return (
     <div className="lobby">
       <div className="lobby-head">
@@ -138,19 +202,17 @@ export function LobbyPage(props: { online: OnlineGame }) {
         <div className="notice invite-notice">
           <span>
             邀请链接：房间 <strong>{invited}</strong>
-            {rememberedName()
-              ? '，正在进入…'
-              : `，昵称「${displayName}」（可在下方修改）`}
+            {pwRequired
+              ? '，这个房间设了密码，请在下方填写后加入'
+              : rememberedName()
+                ? '，正在进入…'
+                : `，昵称「${displayName}」（可在下方修改）`}
           </span>
           {/* 第一次来的人不会被自动拉进房（他还没有昵称），
               但「用房间号加入」的输入框在手机上是第二屏 —— 提示条里直接给一个按钮，
               点一下就进。按钮文案带上昵称，是因为这里入座用的就是它，
               不能让人稀里糊涂顶着「玩家」进去。 */}
-          {!rememberedName() && (
-            <button className="primary" onClick={() => doJoin(invited)} disabled={!connected}>
-              以「{displayName}」加入
-            </button>
-          )}
+          {inviteAction}
           <button
             className="ghost"
             onClick={() => {

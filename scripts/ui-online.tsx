@@ -972,9 +972,61 @@ async function main(): Promise<void> {
   check('第一次来的人用默认昵称入座', firstJoin?.name === '玩家', firstJoin?.name);
   check('进房后地址栏仍然是干净的', w.location.search === '', w.location.search);
 
+  /* ---------------- 13c. 邀请链接 + 带密码的房间 ---------------- */
+  // 朋友点进一个有密码的房间：服务端现在会明确说「这个房间设了密码」，
+  // 界面必须把它变成「能填密码」，而不是让人对着「密码不对」自己找输入框。
+  root2b.unmount();
+  await sleep(100);
+  w.localStorage.clear();
+  w.history.replaceState(null, '', '/?room=B7QZ');
+
+  const root2c = createRoot(container);
+  root2c.render(createElement(App));
+  await sleep(140);
+
+  const ws5c = MockWS.live;
+  ws5c!.emit({ t: 'lobby', rooms: [] });
+  await sleep(160);
+  ws5c!.emit({ t: 'error', msg: '这个房间设了密码，请先填房间密码。' });
+  await sleep(220);
+
+  check('被密码拦住时提示条说明「设了密码」', bodyText().includes('设了密码'), bodyText().slice(0, 140));
+  const pwBtn = $('.invite-notice button.primary');
+  check(
+    '提示条按钮变成「填写密码」',
+    (pwBtn?.textContent ?? '').includes('填写密码'),
+    pwBtn?.textContent ?? '(无)',
+  );
+
+  await click(pwBtn);
+  await sleep(140);
+  const activeEl = w.document.activeElement as HTMLInputElement | null;
+  check(
+    '点「填写密码」把光标送到密码框',
+    activeEl?.getAttribute('placeholder') === '房间密码（有则填）',
+    activeEl?.getAttribute('placeholder') ?? activeEl?.tagName ?? 'null',
+  );
+
+  const pwJoinInput = $('input[placeholder="房间密码（有则填）"]') as HTMLInputElement | null;
+  const setPwVal = Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype, 'value')!.set!;
+  setPwVal.call(pwJoinInput, '8888');
+  pwJoinInput!.dispatchEvent(new w.Event('input', { bubbles: true }));
+  await sleep(180);
+
+  const joinBtn2 = $('.invite-notice button.primary');
+  check(
+    '填了密码后按钮回到「加入」',
+    (joinBtn2?.textContent ?? '').includes('加入'),
+    joinBtn2?.textContent ?? '(无)',
+  );
+  if (joinBtn2) await click(joinBtn2);
+  await sleep(180);
+  const pwJoin = ws5c!.lastOf<{ room: string; name: string; password?: string }>('join');
+  check('带密码的邀请链接把密码一起发出去了', pwJoin?.password === '8888', JSON.stringify(pwJoin));
+
   /* ---------------- 14. 建房带密码 ---------------- */
   // 重挂一次，回到干净的大厅
-  root2b.unmount();
+  root2c.unmount();
   await sleep(100);
   w.localStorage.clear();
   w.history.replaceState(null, '', '/');

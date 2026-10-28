@@ -38,7 +38,6 @@ const VIEWPORTS = [
 ];
 
 let passed = 0;
-let skipped = 0;
 const failures: string[] = [];
 
 function check(label: string, ok: boolean, detail?: unknown): void {
@@ -54,6 +53,16 @@ function check(label: string, ok: boolean, detail?: unknown): void {
 async function shot(p: Page, name: string): Promise<void> {
   await p.screenshot({ path: `shots/${name}.png` });
   console.log(`  · shots/${name}.png`);
+}
+
+/** 把大厅滚回顶部 —— 填昵称时浏览器会把输入框滚进视野，截图上标题就被切掉了 */
+async function scrollLobbyTop(p: Page): Promise<void> {
+  await p.evaluate(`(() => {
+    const el = document.querySelector('.lobby');
+    const sc = el && el.parentElement;
+    if (sc) sc.scrollTop = 0;
+  })()`);
+  await sleep(150);
 }
 
 async function openLobby(p: Page, name: string): Promise<void> {
@@ -115,11 +124,9 @@ interface RowInfo {
   rowH: number;
   rowRight: number;
   metaW: number;
-  hostLines: number;
   stateLines: number;
   stateText: string;
   buttons: { t: string; left: number; right: number }[];
-  flexLines: number;
 }
 
 async function gameOverRow(p: Page): Promise<RowInfo | null> {
@@ -131,38 +138,39 @@ async function gameOverRow(p: Page): Promise<RowInfo | null> {
     const rr = row.getBoundingClientRect();
     const meta = row.querySelector('.room-meta');
     const mr = meta.getBoundingClientRect();
-    const host = row.querySelector('.room-host');
     const state = row.querySelector('.room-state');
     const sr = state.getBoundingClientRect();
     const buttons = [...row.querySelectorAll('button')].map(b => {
       const r = b.getBoundingClientRect();
       return { t: b.textContent.trim(), left: Math.round(r.left), right: Math.round(r.right) };
     });
-    // 折成了几个 flex 行：按子元素 top 去重
-    const flexLines = new Set([...row.children].map(c => Math.round(c.getBoundingClientRect().top))).size;
     return {
       rowW: Math.round(rr.width), rowH: Math.round(rr.height), rowRight: Math.round(rr.right),
       metaW: Math.round(mr.width),
-      hostLines: Math.round(host.getBoundingClientRect().height / lh(host)),
       stateLines: Math.round(sr.height / lh(state)),
       stateText: state.textContent.trim(),
-      buttons, flexLines,
+      buttons,
     };
   })()`) as Promise<RowInfo | null>;
 }
 
-/** 1) 空状态文案：必须在列表还是空的时候量。 */
+/** 1) 空状态文案：必须在「列表真的是空的」时候量。 */
 async function checkEmptyCopy(browser: Browser): Promise<void> {
   console.log('\n1) 空状态说「在右边建一个」，可右边真的有东西吗');
   for (const vp of VIEWPORTS) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
     const p = await ctx.newPage();
+    // 在导航**之前**把 WebSocket 掐掉，房间列表就永远是空的。
+    //
+    // 不能靠「大厅里碰巧没房」：`isPublic` 默认是 true，`check:viewports`
+    // 每跑一次都会在大厅里留下 5 个公开房，5 分钟内不回收。
+    // 靠碰运气的话这一条会一直跳过 —— 而永久跳过等于没测。
+    // 空状态是纯本地渲染（`.lobby-grid` + 两句文案），不需要服务端。
+    await p.routeWebSocket(/.*/, (ws) => ws.close({ code: 1000, reason: 'blocked by check' }));
     await openLobby(p, '空');
     const st = await emptyCopyState(p);
     if (!st) {
-      // 大厅里已经有公开房（别的脚本/别人的房），空状态根本没渲染
-      console.log(`  · ${vp.name}：大厅里已有公开房，空状态没渲染，这条测不到`);
-      skipped++;
+      check(`${vp.name} 空状态能渲染出来`, false, '掐掉 WebSocket 后仍量不到 .lobby-empty');
       await ctx.close();
       continue;
     }
@@ -201,20 +209,34 @@ async function playOneGame(browser: Browser): Promise<{ ctx: BrowserContext; cod
 
   let ended = false;
   const t0 = Date.now();
-  for (let i = 0; i < 300; i++) {
+  let used = 0;
+  // 原来卡「300 步」：实测打完一局要 52 秒，而 300 步 × 150ms 光是等待就 45 秒 ——
+  // 一直是贴着上限在跑，机器稍慢就红（实测偶发过一次「300 步之内没出现结算浮层」）。
+  // 真正的约束是时间不是步数：改成「最多 240 秒 / 2000 步，先到先停」；
+  // 并且真的点到了东西就只等 60ms（游戏在推进），没点到才等 200ms（等对手/AI）。
+  for (let i = 0; i < 2000; i++) {
     if ((await p.locator('.result').count()) > 0) {
       ended = true;
       break;
     }
+    if (Date.now() - t0 > 240_000) break;
+    let acted = false;
     try {
-      await step(p);
+      acted = await step(p);
     } catch {
       /* 重渲染中 */
     }
-    await sleep(150);
+    used = i + 1;
+    await sleep(acted ? 60 : 200);
   }
-  console.log(`   房间 ${code} · 对局结束：${ended ? '是' : '否'}（${Math.round((Date.now() - t0) / 1000)}s）`);
-  check('一局能打完（否则造不出 gameOver 房）', ended, ended ? undefined : '300 步之内没出现结算浮层');
+  console.log(
+    `   房间 ${code} · 对局结束：${ended ? '是' : '否'}（${Math.round((Date.now() - t0) / 1000)}s / ${used} 步）`,
+  );
+  check(
+    '一局能打完（否则造不出 gameOver 房）',
+    ended,
+    ended ? undefined : `240 秒 / 2000 步之内没出现结算浮层（用了 ${used} 步）`,
+  );
   if (!ended) {
     await ctx.close();
     return null;
@@ -239,11 +261,12 @@ async function checkGameOverRow(browser: Browser): Promise<void> {
       }
     }
     if (!row) {
-      console.log(`  · ${vp.name}：大厅里没找到 gameOver 房，这条测不到`);
-      skipped++;
+      // 这一局是脚本自己刚打完的，房主页面还开着 —— 列表里找不到就是真出问题了
+      check(`${vp.name} 大厅里能找到刚打完的那间房`, false, '刷新 10 次仍没找到带「加入下一局」的行');
       await ctx.close();
       continue;
     }
+    await scrollLobbyTop(p);
     await shot(p, `lobby-row-${vp.name}`);
 
     check(
@@ -259,7 +282,7 @@ async function checkGameOverRow(browser: Browser): Promise<void> {
     check(
       `${vp.name} 整行不至于比屏还高（≤160px）`,
       row.rowH <= 160,
-      `${row.rowH}px（折成 ${row.flexLines} 行）`,
+      `${row.rowH}px（说明列 ${row.metaW}px）`,
     );
     const outside = row.buttons.filter((b) => b.right > row.rowRight + 1);
     check(
@@ -282,11 +305,11 @@ async function main(): Promise<void> {
 
   console.log('');
   if (failures.length > 0) {
-    console.log(`通过 ${passed} 项，失败 ${failures.length} 项${skipped ? `，跳过 ${skipped} 项` : ''}：`);
+    console.log(`通过 ${passed} 项，失败 ${failures.length} 项：`);
     for (const f of failures) console.log(`  - ${f}`);
     process.exit(1);
   }
-  console.log(`通过 ${passed} 项${skipped ? `，跳过 ${skipped} 项` : ''}`);
+  console.log(`通过 ${passed} 项`);
   console.log('大厅房间列表自查通过。');
 }
 

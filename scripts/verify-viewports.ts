@@ -739,6 +739,108 @@ async function seatVisibleBesideBar(p: Page): Promise<{
 const WORST_TASK_TEXT = '对局结束时，你面前有 6 张情报，且一张黑色情报都没有。';
 
 /**
+ * 目标条里那几块「原子信息」有没有被折成两行。
+ *
+ * **必须注入最宽的一版**，否则结论取决于这一局随机抽到的阵营：
+ * 4 字的「潜伏战线」比 3 字的「军情局」宽一个汉字，正好把「红 0/3」
+ * 里的空格推成折点。只靠抽签，这条会变成「十次红一次」（同一个理由见
+ * 上面的 `worstTaskSeats`）。
+ *
+ * 用 Range 数**行盒**，不用「高度 / 行高」：这几块是 flex 子项，
+ * 高度还受 `align-items: center` 影响，而 Range 直接量文字实际占了几行。
+ *
+ * 只改 textContent、不增删元素：这个节点是 React 管的，
+ * 动结构会在下一次重渲染时炸 `removeChild`。
+ * 所以特工那一支（没有 `.goal-num`）测的是 `.goal-alt` —— 它本来就存在。
+ */
+async function goalBlocksSplit(
+  p: Page,
+): Promise<{ num: number; black: number; alt: number; tag: string } | null> {
+  return p.evaluate(`(() => {
+    const bar = document.querySelector('.goalbar');
+    if (!bar) return null;
+    const tag = bar.querySelector('.goal-tag');
+    const num = bar.querySelector('.goal-num');
+    const black = bar.querySelector('.goal-black');
+    const alt = bar.querySelector('.goal-alt');
+    if (!tag || !black) return null;
+    const savedTag = tag.textContent;
+    const savedNum = num ? num.textContent : null;
+    tag.textContent = '潜伏战线';
+    if (num) num.textContent = '红 0/3';
+    const lines = (e) => {
+      if (!e) return 0;
+      const r = document.createRange();
+      r.selectNodeContents(e);
+      const tops = [...r.getClientRects()].filter(x => x.width > 0.5).map(x => Math.round(x.top));
+      return new Set(tops).size;
+    };
+    const out = { num: lines(num), black: lines(black), alt: lines(alt), tag: savedTag };
+    tag.textContent = savedTag;
+    if (num && savedNum !== null) num.textContent = savedNum;
+    return out;
+  })()`) as Promise<{ num: number; black: number; alt: number; tag: string } | null>;
+}
+
+/**
+ * 目标条里相邻两块之间还有没有间距。
+ *
+ * 这条专门盯 `@media (max-height: 700px)` 那条路径：那里 `.goalbar` 被改成
+ * `display: block`（为了把阵营标签并进正文首行、省 35px 纵向空间），
+ * 于是 `gap: 2px 8px` **整条失效**，而 `.goal-black { margin-left: auto }`
+ * 在 inline 元素上按规范解析成 0。结果所有相邻块零间距粘成一串：
+ * 360×640 截图读作「红 0/3黑色 0/3」，「…3 张红色情报」和三个进度方块也贴死。
+ *
+ * 逐行取 `getClientRects()`，不用整块的 boundingRect：一个 inline 元素折行后
+ * boundingRect 是几行盒的并集，left/right 会把上一行末尾和下一行开头连起来，
+ * 量出来的「间距」没有意义。所以拿前一块的**最后一个**行盒、后一块的
+ * **第一个**行盒，只有两者 top 相差 <4px（同一行）时才比较。
+ */
+async function goalBlockGaps(p: Page): Promise<{ min: number; pair: string; n: number } | null> {
+  return p.evaluate(`(() => {
+    const bar = document.querySelector('.goalbar');
+    if (!bar) return null;
+    const boxes = (e) => [...e.getClientRects()].filter((r) => r.width > 0.5 && r.height > 0.5);
+    const kids = [...bar.children];
+    let min = Infinity, pair = '', n = 0;
+    for (let i = 1; i < kids.length; i++) {
+      const a = boxes(kids[i - 1]);
+      const b = boxes(kids[i]);
+      if (!a.length || !b.length) continue;
+      const prev = a[a.length - 1];
+      const next = b[0];
+      if (Math.abs(prev.top - next.top) >= 4) continue;
+      const gap = next.left - prev.right;
+      n++;
+      if (gap < min) { min = gap; pair = kids[i - 1].className + ' | ' + kids[i].className; }
+    }
+    return n ? { min: Math.round(min), pair, n } : null;
+  })()`) as Promise<{ min: number; pair: string; n: number } | null>;
+}
+
+/**
+ * 等目标条布局稳定后再量间距。
+ *
+ * 直接量会抓到中间帧：实测偶发过一次 `goal-main | goal-pips blue` 间距 0px，
+ * 而同一个视口连跑两轮都是 8px（这一帧正在换文案/重排）。
+ * 「等两次采样一致」比「多量几次取最大值」诚实 —— 取最大值等于把真正的
+ * 持续 0px 也放过去，而稳定采样只放过中间帧。
+ */
+async function goalBlockGapsStable(
+  p: Page,
+  tries = 8,
+): Promise<{ min: number; pair: string; n: number } | null> {
+  let prev = await goalBlockGaps(p);
+  for (let i = 0; i < tries; i++) {
+    await sleep(120);
+    const cur = await goalBlockGaps(p);
+    if (cur && prev && cur.min === prev.min && cur.pair === prev.pair) return cur;
+    prev = cur ?? prev;
+  }
+  return prev;
+}
+
+/**
  * 换成最长任务文案后，第一排座位卡的身份行还在操作区上面吗。
  *
  * 注入和测量必须在**同一个 evaluate** 里：分开写的话 React 会先重渲染、
@@ -1089,6 +1191,38 @@ async function runViewport(browser: Browser, vp: Viewport): Promise<void> {
     }
     await p.locator('.pick-card').first().click();
     await sleep(700);
+  }
+
+  // 目标条里的数字块不许被折断。
+  // 360×640 实测（修前）：红身份的「红 0/3」被拆成「红」+「0/3」，
+  // 特工的「或集齐 6 张真情报（红蓝皆可）· 当前 0/6」被拆成「…当前 0」+「/6」。
+  // 根因：`.goalbar` 是 flex 容器，这几块是 flex 子项，默认 `flex-shrink: 1`
+  // 会缩到 min-content —— 而带空格的文字 min-content 就是「最长的一个词」。
+  const gb = await goalBlocksSplit(p);
+  if (!gb) {
+    check('目标条能量到（否则下面两条测不到）', false, '找不到 .goalbar / .goal-black');
+  } else {
+    check('目标条的数字块不被折成两行', gb.black === 1, `「黑色 0/3」占 ${gb.black} 行`);
+    if (gb.num > 0) {
+      check('目标条的颜色进度不被折成两行', gb.num === 1, `「红 0/3」占 ${gb.num} 行`);
+    } else {
+      // 特工那一支没有「红 0/3」，改测它自己那条长句
+      check(
+        '特工的目标条长句不被折成两行',
+        gb.alt === 1,
+        `「或集齐 6 张真情报…」占 ${gb.alt} 行`,
+      );
+    }
+  }
+
+  // 目标条里相邻两块之间必须留出间距。
+  // 矮屏那条 `display: block` 路径上 `gap` 整条失效，修前所有相邻块间距为 0
+  // （只有 tag→main 的 6px 来自 .goal-tag 自己的 margin-right）。
+  const gg = await goalBlockGapsStable(p);
+  if (!gg) {
+    check('目标条相邻块的间距能量到', false, '同一行里找不到两个相邻块');
+  } else {
+    check('目标条相邻块之间留出了间距', gg.min >= 4, `最窄 ${gg.min}px（${gg.pair}）`);
   }
 
   // 不是自己回合：手牌条贴底
