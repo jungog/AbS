@@ -83,6 +83,34 @@ async function hasHScroll(p: Page): Promise<boolean> {
   return p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
 }
 
+/**
+ * 座位卡上的玩家名被压成省略号了吗。
+ *
+ * 判据是 `scrollWidth > clientWidth` —— `.pcard-name` 上有
+ * `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`，
+ * 装不下就是这个差值大于 0，跟 `…` 有没有真的画出来无关。
+ *
+ * 为什么会发生：`.pcard-name` 的 `overflow: hidden` 让 flex 的
+ * `min-width: auto` **解析成 0**（规范：可滚动容器的自动最小尺寸是 0），
+ * 于是它成了卡头里唯一能被压缩的东西。360×640 实测（联机房间 1 真人 + 4 AI）：
+ * 卡头内容宽 131px，而「座位号 12 + 名字『机器人 1』61 + AI 徽标 26 +
+ * 身份标签『身份未知』44 + 间距 21 = 164px」，名字被压到 **28px** ——
+ * 四个 AI 全显示成「机…」，谁是谁分不出来。
+ *
+ * 返回被截断的张数和样例文字，方便失败时直接看出是谁。
+ */
+async function clippedNames(p: Page): Promise<{ n: number; total: number; sample: string }> {
+  return (await p.evaluate(`(() => {
+    const all = [...document.querySelectorAll('.pcard-name')];
+    const bad = all.filter((e) => e.scrollWidth > e.clientWidth + 1);
+    return {
+      n: bad.length,
+      total: all.length,
+      sample: bad.map((e) => (e.textContent || '').trim()).slice(0, 4).join('、'),
+    };
+  })()`)) as { n: number; total: number; sample: string };
+}
+
 /** 元素「够得着吗」：先滚到它，再量横向是否完整落在视口里 */
 async function reachable(p: Page, sel: string): Promise<boolean> {
   const loc = p.locator(sel).first();
@@ -1152,6 +1180,15 @@ async function runViewport(browser: Browser, vp: Viewport): Promise<void> {
   await sleep(900);
   await shot(p, `${vp.name}-3-battle`);
   check('对局界面没有横向溢出', !(await hasHScroll(p)));
+
+  // 座位卡上的玩家名不许被压成省略号。房间是 1 真人 + 4 AI，
+  // 四个 AI 名字都是「机器人 N」—— 一旦被裁，它们会全变成同一个「机…」。
+  const nm = await clippedNames(p);
+  check(
+    '座位卡上的玩家名没有被压成省略号',
+    nm.total > 0 && nm.n === 0,
+    nm.total === 0 ? '一张座位卡都没量到' : `${nm.n}/${nm.total} 张被截断（${nm.sample}）`,
+  );
 
   // 选角面板：窄屏下会挤成三列小卡，必须点得到
   if ((await p.locator('.pick-card').count()) > 0) {

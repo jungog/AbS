@@ -117,7 +117,13 @@ select, input {
 }
 .tabs button.active { background: var(--panel-2); color: var(--ink); font-weight: 600; }
 
-.content { flex: 1; min-height: 0; overflow: hidden; }
+.content { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+/* 每个页面一层壳：两个页面同时挂载、只切可见性（理由见 App.tsx 的注释）。
+   壳必须是 flex 子项并拿到确定高度，否则 `.battle` / `.config` 上的
+   `height: 100%` 没有参照物，会塌成 0。 */
+.page { flex: 1; min-height: 0; }
+.page[hidden] { display: none; }
 
 /* ---------------- 对局页 ---------------- */
 .battle {
@@ -631,6 +637,20 @@ textarea.json {
      auto-fill + minmax(160px) 在 360px 宽上会掉成**单列**（内容宽 328 < 2×160+10），
      5 张卡纵向排开 706px —— 一屏只能看到一条缝。锁两列后 3 行、约 370px。 */
   .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* 卡头允许折行：挤不下时让**身份标签**掉到第二行，而不是把玩家名切成省略号。
+   *
+   * 360×640 实测（联机房间补 3 个 AI，卡头内容宽 131px）：
+   *   座位号 12 + 名字「机器人 1」61 + AI 徽标 26 + 身份标签「身份未知」44 + 间距 21
+   *   = 164px，比 131 多 33px。
+   * 而 `.pcard-name` 上有 `overflow: hidden` —— 这让 flex 的 `min-width: auto`
+   * **解析成 0**（规范：可滚动容器的自动最小尺寸是 0），于是名字一路缩到 28px，
+   * 「机器人 1/2/3/4」全变成「机…」，**四个 AI 长得一模一样**。
+   *
+   * 没选「缩字号」也没选「去掉 AI 徽标」：前者违反本项目一贯的「不拿信息换空间」，
+   * 后者只省 26px（还差 7px），而且徽标在「真人和 AI 混坐」时是有用的。
+   * 折行之后名字保持完整，代价是这些卡的头从 24px 变成 ~41px。 */
+  .pcard-head { flex-wrap: wrap; }
 }
 
 /* ---------- 手机横屏 ---------- */
