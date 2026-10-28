@@ -65,7 +65,13 @@ async function until(fn: () => Promise<boolean>, timeoutMs = 15_000): Promise<bo
 async function step(p: Page): Promise<boolean> {
   const pick = p.locator('.pick-card').first();
   if ((await pick.count()) > 0) {
-    await pick.click();
+    // 不用 click()：`.pick-card:hover` 带 `transform: translateY(-1px)`，
+    // Playwright 点之前会先把鼠标移过去 → 元素自己动了 → 判定
+    // 「element is not stable」；再叠加状态推送把选角面板重新挂载
+    // （「element was detached from the DOM」），click 会一直重试到 30 秒超时。
+    // 公网实测就是这么挂的（本地 RTT 下刚好躲过去，所以只在线上红）。
+    // 卡片是 div + onClick，直接派发 click 最稳，也绕开鼠标悬停。
+    await pick.dispatchEvent('click');
     return true;
   }
 
@@ -209,7 +215,7 @@ async function main(): Promise<void> {
     // 公网慢的时候根本轮不到乙选角，它就一直没手牌（实测 3 / 0，等 15 秒也不动）。
     // 这里在轮询里顺手替它点一下，而不是靠循环次数碰运气。
     const pick = b.locator('.pick-card').first();
-    if ((await pick.count()) > 0) await pick.click().catch(() => undefined);
+    if ((await pick.count()) > 0) await pick.dispatchEvent('click').catch(() => undefined);
     handA = await countHand(a);
     handB = await countHand(b);
     return handA > 0 && handB > 0;
