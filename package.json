@@ -10,6 +10,7 @@
     "check:play": "tsx scripts/verify-play-link.ts",
     "check:online": "tsx scripts/verify-online-prod.ts",
     "check:multi": "tsx scripts/verify-invite-multi.ts",
+    "check:7p": "tsx scripts/verify-seven.ts",
     "check:local": "tsx scripts/verify-local-modes.ts",
     "check:restart": "tsx scripts/verify-restart-client.ts",
     "check:viewports": "tsx scripts/verify-viewports.ts",

@@ -6,7 +6,10 @@
  *  2. 检测「引擎是否有阵营偏置」—— 若要排除 AI 策略干扰，
  *     可加 --random 参数改用纯随机策略，此时红蓝应接近 50/50
  *
- * 运行：npx tsx scripts/balance-test.ts [局数] [--random]
+ * 运行：npx tsx scripts/balance-test.ts [局数] [人数] [--random]
+ *   例：npx tsx scripts/balance-test.ts 200 7      ← 7 人标准局
+ *   人数省略时默认 5。策划案 5.6 的胜率目标（红蓝各 38–42%、特工 16–24%）
+ *   是按 **7 人标准局** 定的，调数值时请显式传 7。
  */
 import { loadDefaultPack } from '../src/data/load';
 import { applyCommand, createGame } from '../src/core/engine';
@@ -15,9 +18,12 @@ import type { Command, GameState, PassMethod } from '../src/core/types';
 
 const pack = loadDefaultPack();
 const args = process.argv.slice(2);
-const rounds = Number(args.find((a) => /^\d+$/.test(a)) ?? 100);
+// 原来人数写死 5，而 5.6 的标准局是 7 人 —— 拿 5 人局的数字去对 7 人局的目标，
+// 调出来的参数是错的。现在按位置参数取：第 1 个数字是局数，第 2 个是人数量。
+const nums = args.filter((a) => /^\d+$/.test(a)).map(Number);
+const rounds = nums[0] ?? 100;
+const playerCount = nums[1] ?? 5;
 const useRandom = args.includes('--random');
-const playerCount = 5;
 
 /** 纯随机策略：用于验证引擎本身无阵营偏置 */
 function randomPolicy(state: GameState): Command | null {
