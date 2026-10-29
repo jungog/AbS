@@ -111,6 +111,44 @@ async function clippedNames(p: Page): Promise<{ n: number; total: number; sample
   })()`)) as { n: number; total: number; sample: string };
 }
 
+/** 页面脚本调过几次 `WebSocket.close()`（注入见 runViewport 的 addInitScript） */
+async function wsCloseCount(p: Page): Promise<number> {
+  return (await p.evaluate(
+    () => (window as unknown as { __wsClosed?: number }).__wsClosed ?? -1,
+  )) as number;
+}
+
+/**
+ * 切到「数据配置」再切回「对局」，并回报切回后的现场。
+ *
+ * 为什么要单独立一条：`App.tsx` 原来是
+ * `tab === 'battle' ? <BattlePage /> : <ConfigPage />`，条件渲染会**卸载**
+ * BattlePage —— 而 `useOnlineGame` 的 WebSocket、大厅的页签、昵称输入框全在它内部。
+ * 于是「在大厅等朋友时点一下数据配置看牌表」回来就掉回「本地对局」启动页。
+ * 自检脚本以前是靠**把它放在最前面**绕过去的（见 0) 段的注释），所以这个坑
+ * 一直没被断言过。
+ */
+async function visitConfigAndBack(p: Page): Promise<{
+  lobbyVisible: boolean;
+  launchVisible: boolean;
+  nick: string;
+  wsClosed: number;
+}> {
+  await p.locator('.topbar button', { hasText: '数据配置' }).click();
+  await p.waitForSelector('.config', { timeout: 10_000 });
+  await sleep(400);
+  await p.locator('.topbar button', { hasText: '对局' }).click();
+  await sleep(600);
+  return {
+    // 注意用 isVisible 而不是「DOM 里在不在」：两个页面现在同时挂载，
+    // 隐藏的那个也查得到元素，只查存在会永远通过。
+    lobbyVisible: await p.locator('.lobby').first().isVisible().catch(() => false),
+    launchVisible: await p.locator('.launch').first().isVisible().catch(() => false),
+    nick: (await p.locator('.nick-input').first().inputValue().catch(() => '')) as string,
+    wsClosed: await wsCloseCount(p),
+  };
+}
+
 /** 元素「够得着吗」：先滚到它，再量横向是否完整落在视口里 */
 async function reachable(p: Page, sel: string): Promise<boolean> {
   const loc = p.locator(sel).first();
@@ -1045,6 +1083,17 @@ async function runViewport(browser: Browser, vp: Viewport): Promise<void> {
   });
   const p = await ctx.newPage();
 
+  // 数 WebSocket.close() 被调了几次 —— 用来证明「切到数据配置再切回来」没有把
+  // 联机连接关掉。必须**在页面脚本之前**注入，所以走 addInitScript。
+  await ctx.addInitScript(() => {
+    (window as unknown as { __wsClosed: number }).__wsClosed = 0;
+    const orig = WebSocket.prototype.close;
+    WebSocket.prototype.close = function (this: WebSocket, ...args: []): void {
+      (window as unknown as { __wsClosed: number }).__wsClosed += 1;
+      return orig.apply(this, args);
+    };
+  });
+
   const errors: string[] = [];
   p.on('pageerror', (e) => errors.push(e.message));
   p.on('console', (m) => {
@@ -1058,7 +1107,9 @@ async function runViewport(browser: Browser, vp: Viewport): Promise<void> {
   check('本地启动页没有横向溢出', !(await hasHScroll(p)));
 
   // 数据配置：一整页 `<table class="grid">`，以前零覆盖。
-  // 放在最前面量，避免「对局中切到数据配置」把联机 hook 卸载掉（那是另一件事）。
+  // 以前这里写着「放在最前面量，避免『对局中切到数据配置』把联机 hook 卸载掉
+  // （那是另一件事）」—— 那件事已经修了（App.tsx 改成两个页面都挂载），
+  // 现在由下面 1b 段的「切走再切回」三条断言盯着。
   await p.locator('.topbar button', { hasText: '数据配置' }).click();
   await p.waitForSelector('.config', { timeout: 10_000 });
   await sleep(500);
@@ -1105,6 +1156,25 @@ async function runViewport(browser: Browser, vp: Viewport): Promise<void> {
     const tap = await smallTapTargets(p);
     check('大厅里每个可点元素都够大（≥32px，手指点得准）', tap.count === 0, tap.worst);
   }
+
+  // 1b. 在大厅里点一下「数据配置」再切回来，大厅必须原样还在。
+  //
+  // 这条以前是**靠回避**而不是靠断言：0) 段故意把数据配置放在最前面量，
+  // 注释写着「避免『对局中切到数据配置』把联机 hook 卸载掉（那是另一件事）」。
+  // 那件事就是这一条 —— 条件渲染卸载 BattlePage ⇒ WebSocket 被 close ⇒
+  // 切回来掉回「本地对局」启动页、昵称清空。实测修前 +10 秒仍停在 `.launch`。
+  const back = await visitConfigAndBack(p);
+  check(
+    '切到数据配置再切回，仍停在联机大厅',
+    back.lobbyVisible && !back.launchVisible,
+    back.launchVisible ? '掉回了「本地对局」启动页' : '看不到 .lobby',
+  );
+  check('切走再切回，昵称没丢', back.nick === '视口', `昵称变成「${back.nick}」`);
+  check(
+    '切走再切回，联机连接没被关掉',
+    back.wsClosed === 0,
+    `WebSocket.close() 被调了 ${back.wsClosed} 次${back.wsClosed < 0 ? '（注入没生效）' : ''}`,
+  );
 
   console.log('2) 房间页');
   await p.locator('button', { hasText: '创建并进入' }).click();
@@ -1540,6 +1610,22 @@ async function runViewport(browser: Browser, vp: Viewport): Promise<void> {
       );
     }
   }
+
+  // 1c. 对局中切到数据配置再切回来 —— 这是同一条病更严重的那个版本：
+  // 卸载 BattlePage ⇒ WebSocket 被 close ⇒ 服务端判掉线 ⇒ 别人看到「掉线」、
+  // 座位进托管。放在这一段的**最后**做，免得切换打断上面那些依赖滚动位置的断言。
+  const inGame = await visitConfigAndBack(p);
+  const stillBattle = await p.locator('.battle').first().isVisible().catch(() => false);
+  check(
+    '对局中切走再切回，仍在牌桌上（没掉回启动页）',
+    stillBattle,
+    inGame.launchVisible ? '掉回了「本地对局」启动页' : '看不到 .battle',
+  );
+  check(
+    '对局中切走再切回，联机连接没被关掉',
+    inGame.wsClosed === 0,
+    `WebSocket.close() 被调了 ${inGame.wsClosed} 次（关掉就会被判掉线）`,
+  );
 
   check('没有控制台报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 

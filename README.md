@@ -104,13 +104,18 @@ npm run test:ui       # UI：SSR 渲染 + 本地对局真点按钮打完一整�
 npm run test:server   # 联机链路：同进程起服务端，覆盖大厅/建房/重连/托管/观战/房主转移
 npm run test:prod     # 生产化：单端口托管 / 限流 / 体积上限 / 容量上限 / 快照 / 真·重启恢复
 npm run test:all      # 以上全部（含 test:server + test:prod）
-npm run balance       # 100 局胜率分布，调数值时看这个
+npm run balance       # 100 局胜率分布（默认 5 人），调数值时看这个
+                      # 人数可传：npx tsx scripts/balance-test.ts 200 7 ← 7 人标准局
+                      # 策划案 5.6 的目标（红蓝各 38–42%、特工 16–24%）是按 7 人定的，
+                      # 拿 5 人局的数字去对 7 人局的目标会调错方向
 npm run build         # 生产构建
 
 # 真浏览器自查（要先把 npm run serve 跑起来）
 npm run check:play    # 打开链接 → 单人 + AI → 真操作 6 步 → 断言无控制台报错
 npm run check:online  # 两个独立浏览器上下文 → 建房/加入/开局 → 各走几步 → 中途有人离开（单端口生产构建）
 npm run check:multi   # 邀请链接的两条真实路径：带密码的房间 / 3 人局（第三个玩家点链接进来）
+npm run check:7p      # 7 人局（策划案 5.6 的标准局）：开局牌数 + 跑到结算浮层 + 三个视口布局，
+                      # 共 18 条断言。7 人只在引擎层和服务端测过，真浏览器里就靠这一条
 npm run check:local   # 本地三种模式：上帝视角会自己往下走、热座不会自己跑、单人 + AI 能轮到人
 npm run check:restart # 自己起服务端 → 开局 → 杀进程 → 重启 → 断言客户端自己连回来还能出牌
 
@@ -126,7 +131,7 @@ npm run shots:result   # 结算浮层在 330 高的横屏里放不放得下（�
 
 # 多视口自查（打生产构建，不用先起 dev）
 npm run check:viewports # 手机 390×844 / 小屏安卓 360×640 / 手机横屏 844×390 / 小笔记本 1280×720 / 桌面 1440×900
-                        # 每个视口走一遍大厅→房间→对局，共 180 条断言 / 2 条跳过 + 5 张图
+                        # 每个视口走一遍大厅→房间→对局，共 205 条断言 / 2 条跳过 + 5 张图
                         # （含「翻上去之后浮出 ↓ N 条新消息」四条，只在日志会溢出的三个视口跑）
 npm run check:result    # 结算浮层在两种手机上放不放得下（要把整局打完，十几秒）
 npm run check:lobby     # 大厅房间列表：空状态方位话 + 「上一局已结束」那一行 × 5 视口，
@@ -1660,3 +1665,77 @@ function isGameOver(room: Room): boolean {
   扫的也只有 5 个状态。把它做成常驻的 `npm run check:clip`，状态覆盖到
   结算页 / 数据配置 / 观战，就能自动发现这一类「内容装不下」的问题，
   而不用每轮靠猜。判据现成：`overflow: hidden` 且 `scrollWidth > clientWidth`。
+
+  **在大厅点一下「数据配置」再切回，掉回了「本地对局」启动页。**
+
+  这条其实一直被**绕开**而不是被断言：`check:viewports` 的 0) 段原来写着
+  「数据配置放在最前面量，避免『对局中切到数据配置』把联机 hook 卸载掉
+  （那是另一件事）」。这一轮把「那件事」查了。
+
+  发现路径：先按上轮候选写裁切探测器扫「数据配置 / 结算 / 观战」三个没扫过的
+  状态，扫到一半点回「对局」时**卡在找不到「创建并进入」**上 —— 一查才发现
+  已经不在大厅了。
+
+  实测（1280×900，已进大厅并填好昵称）：
+
+  ```
+  切走前      .lobby ✓  昵称「测试昵称」
+  在配置页    .config ✓
+  切回 +500ms .launch ✓（本地启动页）  昵称空
+  切回 +10s   .launch ✓               昵称空   ← 不是「短暂重连」，是状态全丢
+  ```
+
+  根因：`App.tsx` 是 `tab === 'battle' ? <BattlePage /> : <ConfigPage />`。
+  条件渲染会**卸载** BattlePage，而这些东西全在它内部：
+  `useOnlineGame` 的 WebSocket（卸载 ⇒ cleanup 里 `close()` ⇒ 服务端判掉线）、
+  大厅/房间的页签状态、昵称输入框。切回来只剩 `lastRoom()` 这一个线索，
+  没进过房间时它还是 null，于是落回「本地对局」。
+  对局中切走更严重：直接掉线，别人看到「掉线」、座位进托管。
+
+  修法：两个页面**都挂载**，用 `hidden` 只切可见性。
+
+  ```tsx
+  <div className="page" hidden={tab !== 'battle'}><BattlePage /></div>
+  <div className="page" hidden={tab !== 'config'}><ConfigPage /></div>
+  ```
+
+  ConfigPage 没有任何副作用（无 `useEffect` / 无定时器 / 不读 localStorage），
+  挂着不花什么钱。`.content` 改成 `display: flex; flex-direction: column`，
+  `.page { flex: 1; min-height: 0 }` —— 否则 `.battle` / `.config` 上的
+  `height: 100%` 没有参照物，会塌成 0。
+
+  新断言 **25 条**（5 视口 × 5），`check:viewports` **180 → 205 通过 / 2 跳过**：
+
+  ```
+  大厅段（每个视口 3 条）
+    切到数据配置再切回，仍停在联机大厅（用 isVisible，不是「DOM 里在不在」）
+    切走再切回，昵称没丢
+    切走再切回，联机连接没被关掉
+  对局段（每个视口 2 条，放在该段最后，免得切换打断依赖滚动位置的断言）
+    对局中切走再切回，仍在牌桌上
+    对局中切走再切回，联机连接没被关掉
+  ```
+
+  「连接没被关掉」不是靠观察「有没有重连」（那只有几百毫秒，抓不稳），
+  而是 `addInitScript` 把 `WebSocket.prototype.close` 包一层计数 ——
+  修后一次都不会被调，修前切一次就是 1 次。
+
+  两个坑写在这里：
+
+  - **必须用 `isVisible()` 而不是 `querySelector`**。两个页面现在同时挂载，
+    隐藏的那个也查得到元素；只查「在不在」这条断言会永远通过。
+  - **大厅段的断言要放在 `2) 房间页` 之前**。放在后面的话，修前状态下页面
+    已经掉回启动页，后面的 `创建并进入` 根本点不到，脚本会在第一个视口就崩。
+
+  变异（`App.tsx` 改回条件渲染）：360×640 立刻红 3 条 ——
+  「掉回了『本地对局』启动页」/「昵称变成『』」/「`WebSocket.close()` 被调了 1 次」，
+  随后脚本因为掉回启动页而中断（拿不到「创建并进入」）。
+  这个中断本身也是证据：修前状态下这条流程**走不下去**。
+
+  验收：`check:viewports` **205 通过 / 2 跳过**、`check:modes` **19 通过**、
+  `npm run test:all` 全绿，另外四个视觉自查（`check:result` / `check:spectator` /
+  `check:discard` / `check:response`）也复跑过 —— 它们都渲染 BattlePage，
+  而 `.content` 的布局改了。
+
+  下一轮候选：`check:lobby` / `check:modes` 都还没进 `test:all`（各自要真打完一局
+  或等 8 秒推进），目前靠手动跑。另外裁切探测器仍然只是临时探针。

@@ -92,6 +92,21 @@ function check(label: string, ok: boolean, detail?: string): void {
   console.log(`${ok ? '✔' : '✖'} ${label}${!ok && detail ? ` —— ${detail}` : ''}`);
 }
 
+/**
+ * 等 MockWS 真的 OPEN 起来。
+ *
+ * App.tsx 改成「两个页面常驻挂载、只切 hidden」之后，首帧要多渲染一整个
+ * ConfigPage（整张牌表）。jsdom 里固定 `sleep(140)` 已经不够：`.lobby` 已经在
+ * DOM 里，但 WebSocket 还没建起来，于是后面 `ws5!.emit` 直接
+ * `TypeError: Cannot read properties of null (reading 'emit')`。
+ *
+ * 等连接而不是把 sleep 改大 —— 改大只是把「稳定红」换成「偶发红」。
+ */
+async function waitWS(timeoutMs = 2500): Promise<MockWS | null> {
+  for (let i = 0; i < timeoutMs / 50 && !MockWS.live; i++) await sleep(50);
+  return MockWS.live;
+}
+
 async function main(): Promise<void> {
   /* ---------------- DOM ---------------- */
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
@@ -923,7 +938,13 @@ async function main(): Promise<void> {
 
   const root2 = createRoot(container);
   root2.render(createElement(App));
-  await sleep(140);
+  // App.tsx 改成「两个页面常驻挂载、只切 hidden」之后，首帧要多渲染一整个
+  // ConfigPage（整张牌表），jsdom 里固定 140ms 已经不够了：实测 `.lobby` 已经在
+  // DOM 里，但 WebSocket 还没建起来，于是下面 `ws5!.emit` 直接
+  // TypeError: Cannot read properties of null (reading 'emit')。
+  // 等连接真的 OPEN，而不是把 140 改大 —— 改大只是把红变成偶发红。
+  const ws5 = await waitWS();
+  check('邀请链接：建起了 WebSocket 连接', ws5 !== null, '2.5 秒内没有 OPEN 的连接');
 
   // 这里以前先 click 一下「联机对局」再断言 —— 等于测试替用户切了页签，
   // 「?room= 根本没被读」的 bug 就一直藏在这一行后面（实测公网点邀请链接
@@ -935,11 +956,10 @@ async function main(): Promise<void> {
   check('地址栏里的邀请参数被消费掉', w.location.search === '', w.location.search);
   check('顶部显示邀请提示', bodyText().includes('邀请链接'), bodyText().slice(0, 80));
 
-  const ws5 = MockWS.live;
-  ws5!.emit({ t: 'lobby', rooms: [] });
+  ws5?.emit({ t: 'lobby', rooms: [] });
   await sleep(220);
 
-  const inviteJoin = ws5!.lastOf<{ room: string; name: string }>('join');
+  const inviteJoin = ws5?.lastOf<{ room: string; name: string }>('join');
   check('记住过昵称的人点链接直接进房', inviteJoin?.room === 'B7QZ', JSON.stringify(inviteJoin));
   check('自动加入用的是记住的昵称', inviteJoin?.name === '老玩家', inviteJoin?.name);
 
@@ -954,20 +974,22 @@ async function main(): Promise<void> {
 
   const root2b = createRoot(container);
   root2b.render(createElement(App));
-  await sleep(140);
+  // 邀请提示条依赖「已经连上大厅」才渲染，所以要先把连接等起来、推一条 lobby，
+  // 再去查 `.invite-notice` —— 顺序反了就是「按钮 (无)」（实测就是这么红的）。
+  const ws5b = await waitWS();
+  check('邀请链接：第一次来的人也建起了连接', ws5b !== null, '2.5 秒内没有 OPEN 的连接');
+  ws5b?.emit({ t: 'lobby', rooms: [] });
+  await sleep(160);
 
   check('第一次来的人也直接落在联机大厅', Boolean($('.lobby')), bodyText().slice(0, 60));
   const inviteBtn = $('.invite-notice button.primary');
   check('邀请提示条里有「加入」按钮（手机不用往下滚）', Boolean(inviteBtn), inviteBtn?.textContent ?? '(无)');
   check('按钮上写明了会用什么昵称入座', (inviteBtn?.textContent ?? '').includes('玩家'), inviteBtn?.textContent ?? '');
 
-  const ws5b = MockWS.live;
-  ws5b!.emit({ t: 'lobby', rooms: [] });
-  await sleep(160);
   if (inviteBtn) await click(inviteBtn);
   await sleep(160);
 
-  const firstJoin = ws5b!.lastOf<{ room: string; name: string }>('join');
+  const firstJoin = ws5b?.lastOf<{ room: string; name: string }>('join');
   check('点提示条上的按钮直接进房', firstJoin?.room === 'B7QZ', JSON.stringify(firstJoin));
   check('第一次来的人用默认昵称入座', firstJoin?.name === '玩家', firstJoin?.name);
   check('进房后地址栏仍然是干净的', w.location.search === '', w.location.search);
@@ -984,7 +1006,7 @@ async function main(): Promise<void> {
   root2c.render(createElement(App));
   await sleep(140);
 
-  const ws5c = MockWS.live;
+  const ws5c = await waitWS();
   ws5c!.emit({ t: 'lobby', rooms: [] });
   await sleep(160);
   ws5c!.emit({ t: 'error', msg: '这个房间设了密码，请先填房间密码。' });
@@ -1039,7 +1061,7 @@ async function main(): Promise<void> {
   await click(tab3 ?? null);
   await sleep(160);
 
-  const ws6 = MockWS.live;
+  const ws6 = await waitWS();
   ws6!.emit({ t: 'lobby', rooms: [] });
   await sleep(100);
 
