@@ -874,32 +874,20 @@ function checkSecretTasks(state: GameState, pack: EnginePack): void {
 
 function checkWin(state: GameState, pack: EnginePack): void {
   const { winIntelCount, agentWinIntelCount } = pack.config;
+  const alive = alivePlayers(state);
 
-  for (const p of alivePlayers(state)) {
-    const red = p.intel.filter((s) => s.color === 'red').length;
-    const blue = p.intel.filter((s) => s.color === 'blue').length;
-
-    if (red >= winIntelCount) {
-      state.winner = {
-        side: 'red',
-        winners: state.players.filter((x) => x.identity === 'red' && x.alive).map((x) => x.id),
-        by: p.id,
-        reason: `${p.name} 集齐 ${winIntelCount} 张红色情报，潜伏战线获胜。`,
-      };
-      log(state, state.winner.reason, { tone: 'good' });
-      return;
-    }
-    if (blue >= winIntelCount) {
-      state.winner = {
-        side: 'blue',
-        winners: state.players.filter((x) => x.identity === 'blue' && x.alive).map((x) => x.id),
-        by: p.id,
-        reason: `${p.name} 集齐 ${winIntelCount} 张蓝色情报，军情局获胜。`,
-        };
-      log(state, state.winner.reason, { tone: 'good' });
-      return;
-    }
-    if (p.identity === 'agent' && red + blue >= agentWinIntelCount) {
+  /*
+   * 顺序按策划案 4.9：**特工优先**。
+   *
+   * 「特工宣告胜利时，会导致非特工玩家的宣告失效」—— 所以特工必须先扫。
+   * 原来是同一个循环里「先判红 → 再判蓝 → 再判特工」，座位序靠前的阵营玩家
+   * 会抢先宣告：红方刚凑齐三张红，旁边的特工其实也凑齐了 6 张真情报，
+   * 结果判给红方 —— 恰好是 4.9 用来举例的那个「最精彩的一幕」被吃掉。
+   */
+  for (const p of alive) {
+    if (p.identity !== 'agent') continue;
+    const real = p.intel.filter((s) => s.color === 'red' || s.color === 'blue').length;
+    if (real >= agentWinIntelCount) {
       state.winner = {
         side: 'agent',
         winners: [p.id],
@@ -911,8 +899,42 @@ function checkWin(state: GameState, pack: EnginePack): void {
     }
   }
 
-  // 只剩一人 → 独活获胜
-  const alive = alivePlayers(state);
+  /*
+   * 阵营胜利：策划案 4.7 的原话是「**同阵营**任意一名玩家面前集齐 3 张红色情报」。
+   *
+   * 这里原来只判 `red >= winIntelCount`，没有判持有者身份。后果是**蓝方玩家**
+   * 面前集齐 3 张红就算红方获胜 —— 拿异色情报等于给对面送人头。
+   * 实测 7 人局 120 局里有 49 局（40.8%）是这样结束的，`by` 指向的玩家身份
+   * 与 `side` 不符；顺带把特工「6 张真情报」那条路径彻底堵死（凑到 3 张就被判负）。
+   */
+  for (const p of alive) {
+    const red = p.intel.filter((s) => s.color === 'red').length;
+    const blue = p.intel.filter((s) => s.color === 'blue').length;
+
+    if (p.identity === 'red' && red >= winIntelCount) {
+      state.winner = {
+        side: 'red',
+        // 4.7：「阵营玩家即使已死亡，也会因同阵营队友达成胜利条件而共同获胜」
+        winners: state.players.filter((x) => x.identity === 'red').map((x) => x.id),
+        by: p.id,
+        reason: `${p.name} 集齐 ${winIntelCount} 张红色情报，潜伏战线获胜。`,
+      };
+      log(state, state.winner.reason, { tone: 'good' });
+      return;
+    }
+    if (p.identity === 'blue' && blue >= winIntelCount) {
+      state.winner = {
+        side: 'blue',
+        winners: state.players.filter((x) => x.identity === 'blue').map((x) => x.id),
+        by: p.id,
+        reason: `${p.name} 集齐 ${winIntelCount} 张蓝色情报，军情局获胜。`,
+      };
+      log(state, state.winner.reason, { tone: 'good' });
+      return;
+    }
+  }
+
+  // 只剩一人 → 独活获胜（4.9 路径三）
   if (alive.length === 1) {
     const last = alive[0]!;
     state.winner = {

@@ -369,6 +369,101 @@ function freshGame(seed: string): GameState {
 }
 
 /* ------------------------------------------------------------------ */
+/* 9. 胜利判定的阵营归属（策划案 4.7 / 4.9）                             */
+/*                                                                     */
+/* 这一组是回归断言。原来 `checkWin` 只判「面前有几张红」，没判持有者    */
+/* 是不是红方 —— 蓝方玩家凑齐 3 张红会被判成红方获胜。实测 7 人局 120 局 */
+/* 里有 49 局（40.8%）这样结束，`by` 的身份与 `side` 不符；特工凑到 3 张 */
+/* 同色就被判负，「6 张真情报」那条路径一次都走不到。                    */
+/* ------------------------------------------------------------------ */
+{
+  const redCard = pack.cards.find((c) => c.color === 'red')!;
+  const blueCard = pack.cards.find((c) => c.color === 'blue')!;
+  const intel = (color: 'red' | 'blue', n: number, tag: string) =>
+    Array.from({ length: n }, (_, i) => ({
+      uid: `${tag}${i}`,
+      defId: color === 'red' ? redCard.id : blueCard.id,
+      color,
+      method: 'cipher' as const,
+    }));
+
+  /** 造一局 4 人、跳过选角，并让第 1 个座位立刻可以推进（触发 checkWin） */
+  const stage = (seed: string) => {
+    const g = createGame({
+      pack,
+      seed,
+      skipSetup: true,
+      players: Array.from({ length: 4 }, (_, i) => ({ name: `P${i}`, isBot: false })),
+    });
+    g.phase = 'action';
+    g.pending = { kind: 'action', player: g.players[0]!.id, prompt: '' };
+    return g;
+  };
+
+  // 9a. 蓝方玩家面前 3 张红 ⇒ 红方不获胜
+  const g1 = stage('WIN-A');
+  g1.players[0]!.identity = 'blue';
+  g1.players[0]!.intel = intel('red', 3, 'a');
+  const r1 = applyCommand(g1, pack, { type: 'advancePhase' });
+  check(
+    '蓝方玩家集齐 3 张红，不判红方获胜',
+    r1.state.winner?.side !== 'red',
+    `实际判给 ${r1.state.winner?.side ?? '无'}`,
+  );
+
+  // 9b. 特工面前 3 张红 ⇒ 红方不获胜（否则特工的 6 张路径永远到不了）
+  const g2 = stage('WIN-B');
+  g2.players[0]!.identity = 'agent';
+  g2.players[0]!.intel = intel('red', 3, 'b');
+  const r2 = applyCommand(g2, pack, { type: 'advancePhase' });
+  check(
+    '特工集齐 3 张红，不判红方获胜',
+    r2.state.winner?.side !== 'red',
+    `实际判给 ${r2.state.winner?.side ?? '无'}`,
+  );
+
+  // 9c. 蓝方玩家面前 3 张蓝 ⇒ 军情局获胜，且宣告者就是他
+  const g3 = stage('WIN-C');
+  g3.players[1]!.identity = 'blue';
+  g3.players[1]!.intel = intel('blue', 3, 'c');
+  const r3 = applyCommand(g3, pack, { type: 'advancePhase' });
+  check('蓝方玩家集齐 3 张蓝，军情局获胜', r3.state.winner?.side === 'blue', `实际 ${r3.state.winner?.side ?? '无'}`);
+  check('宣告者是那位蓝方玩家', r3.state.winner?.by === g3.players[1]!.id, `实际 ${r3.state.winner?.by ?? '无'}`);
+
+  // 9d. 特工 6 张真情报 ⇒ 特工胜，且**优先于**同时达成的红方
+  //     座位序 p0（红，3 张红）在 p1（特工，6 张真情报）之前 —— 4.9 要求特工赢。
+  //
+  //     坑：特工凑齐 6 张真情报时，收集类任务（collectTotal 5/6、holdColor 3）几乎必然
+  //     同时完成，于是 `checkSecretTasks`（在 checkWin 之前）会先判「任务获胜」，
+  //     把这条断言变成空转 —— 实测第一版就是这么假绿的。
+  //     哨兵的 surviveRounds 6 在第 1 轮不可能完成，用它把任务路径排除掉。
+  const g4 = stage('WIN-D');
+  g4.players[0]!.identity = 'red';
+  g4.players[0]!.intel = intel('red', 3, 'd0');
+  g4.players[1]!.identity = 'agent';
+  g4.players[1]!.characterId = 'sentinel';
+  g4.players[1]!.intel = [...intel('red', 3, 'd1'), ...intel('blue', 3, 'd2')];
+  const r4 = applyCommand(g4, pack, { type: 'advancePhase' });
+  check('特工 6 张真情报与红方 3 张红同时达成时，特工优先', r4.state.winner?.side === 'agent',
+    `实际 ${r4.state.winner?.side ?? '无'}（${r4.state.winner?.reason ?? ''}）`);
+
+  // 9e. 已死亡的队友也在胜利名单里（4.7：「即使已死亡，也会共同获胜」）
+  const g5 = stage('WIN-E');
+  g5.players[0]!.identity = 'red';
+  g5.players[0]!.intel = intel('red', 3, 'e0');
+  g5.players[2]!.identity = 'red';
+  g5.players[2]!.alive = false;
+  const r5 = applyCommand(g5, pack, { type: 'advancePhase' });
+  const winners = r5.state.winner?.winners ?? [];
+  check('红方获胜', r5.state.winner?.side === 'red', `实际 ${r5.state.winner?.side ?? '无'}`);
+  check(
+    '已死亡的红方队友也在胜利名单里',
+    winners.includes(g5.players[2]!.id),
+    `名单 ${winners.join(',') || '空'}`,
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* 输出                                                                */
 /* ------------------------------------------------------------------ */
 let ok = true;
